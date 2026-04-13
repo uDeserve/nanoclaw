@@ -7,6 +7,7 @@ import {
   DEFAULT_TRIGGER,
   getTriggerPattern,
   GROUPS_DIR,
+  HEALTHCLAW_ENABLED,
   IDLE_TIMEOUT,
   MAX_MESSAGES_PER_PROMPT,
   POLL_INTERVAL,
@@ -65,6 +66,11 @@ import { startSessionCleanup } from './session-cleanup.js';
 import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
 import { logger } from './logger.js';
+import { handleMedicalMessage } from './healthclaw/runtime/handle-medical-message.js';
+import {
+  extractHealthClawCommand,
+  formatPatientViewMessage,
+} from './healthclaw/runtime/command.js';
 
 // Re-export for backwards compatibility during refactor
 export { escapeXml, formatMessages } from './router.js';
@@ -228,6 +234,9 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   }
 
   const prompt = formatMessages(missedMessages, TIMEZONE);
+  const healthClawCommand = HEALTHCLAW_ENABLED
+    ? extractHealthClawCommand(missedMessages)
+    : undefined;
 
   // Advance cursor so the piping path in startMessageLoop won't re-fetch
   // these messages. Save the old cursor so we can roll back on error.
@@ -258,6 +267,36 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   await channel.setTyping?.(chatJid, true);
   let hadError = false;
   let outputSentToUser = false;
+
+  if (healthClawCommand) {
+    try {
+      const medicalResult = handleMedicalMessage({
+        chatJid,
+        groupFolder: group.folder,
+        content: healthClawCommand,
+      });
+      await channel.sendMessage(
+        chatJid,
+        formatPatientViewMessage(medicalResult.patientView),
+      );
+      logger.info(
+        {
+          group: group.name,
+          traceId: medicalResult.trace.id,
+          templateId: medicalResult.trace.templateId,
+        },
+        'HealthClaw host-side handler completed',
+      );
+      await channel.setTyping?.(chatJid, false);
+      return true;
+    } catch (err) {
+      lastAgentTimestamp[chatJid] = previousCursor;
+      saveState();
+      await channel.setTyping?.(chatJid, false);
+      logger.error({ group: group.name, err }, 'HealthClaw handler error');
+      return false;
+    }
+  }
 
   const output = await runAgent(group, prompt, chatJid, async (result) => {
     // Streaming output callback — called for each agent result

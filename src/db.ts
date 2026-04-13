@@ -11,6 +11,7 @@ import {
   ScheduledTask,
   TaskRunLog,
 } from './types.js';
+import { MedicalTrace } from './healthclaw/types.js';
 
 let db: Database.Database;
 
@@ -82,6 +83,28 @@ function createSchema(database: Database.Database): void {
       container_config TEXT,
       requires_trigger INTEGER DEFAULT 1
     );
+    CREATE TABLE IF NOT EXISTS medical_traces (
+      id TEXT PRIMARY KEY,
+      chat_jid TEXT NOT NULL,
+      group_folder TEXT NOT NULL,
+      template_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      trace_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_medical_traces_chat ON medical_traces(chat_jid, created_at);
+    CREATE INDEX IF NOT EXISTS idx_medical_traces_group ON medical_traces(group_folder, created_at);
+
+    CREATE TABLE IF NOT EXISTS medical_trace_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trace_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      FOREIGN KEY (trace_id) REFERENCES medical_traces(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_medical_trace_events_trace ON medical_trace_events(trace_id, created_at);
   `);
 
   // Add context_mode column if it doesn't exist (migration for existing DBs)
@@ -687,6 +710,80 @@ export function getAllRegisteredGroups(): Record<string, RegisteredGroup> {
     };
   }
   return result;
+}
+
+export function saveMedicalTrace(trace: MedicalTrace): void {
+  db.prepare(
+    `
+    INSERT OR REPLACE INTO medical_traces (
+      id,
+      chat_jid,
+      group_folder,
+      template_id,
+      status,
+      created_at,
+      updated_at,
+      trace_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    trace.id,
+    trace.chatJid,
+    trace.groupFolder,
+    trace.templateId,
+    trace.status,
+    trace.createdAt,
+    trace.updatedAt,
+    JSON.stringify(trace),
+  );
+}
+
+export function appendMedicalTraceEvent(
+  traceId: string,
+  eventType: string,
+  payload: Record<string, unknown>,
+  createdAt: string = new Date().toISOString(),
+): void {
+  db.prepare(
+    `
+    INSERT INTO medical_trace_events (trace_id, event_type, created_at, payload_json)
+    VALUES (?, ?, ?, ?)
+  `,
+  ).run(traceId, eventType, createdAt, JSON.stringify(payload));
+}
+
+export function getMedicalTrace(traceId: string): MedicalTrace | undefined {
+  const row = db
+    .prepare('SELECT trace_json FROM medical_traces WHERE id = ?')
+    .get(traceId) as { trace_json: string } | undefined;
+  return row ? (JSON.parse(row.trace_json) as MedicalTrace) : undefined;
+}
+
+export function getMedicalTraceEvents(traceId: string): Array<{
+  type: string;
+  createdAt: string;
+  payload: Record<string, unknown>;
+}> {
+  const rows = db
+    .prepare(
+      `
+      SELECT event_type, created_at, payload_json
+      FROM medical_trace_events
+      WHERE trace_id = ?
+      ORDER BY created_at
+    `,
+    )
+    .all(traceId) as Array<{
+    event_type: string;
+    created_at: string;
+    payload_json: string;
+  }>;
+
+  return rows.map((row) => ({
+    type: row.event_type,
+    createdAt: row.created_at,
+    payload: JSON.parse(row.payload_json) as Record<string, unknown>,
+  }));
 }
 
 // --- JSON migration ---
