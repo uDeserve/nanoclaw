@@ -95,6 +95,16 @@ function dedupe(items: string[]): string[] {
   return Array.from(new Set(items));
 }
 
+function shouldKeepPreviousChiefComplaint(
+  currentChiefComplaint: string | undefined,
+): boolean {
+  if (!currentChiefComplaint) {
+    return true;
+  }
+
+  return /^(it|this|they)\b/i.test(currentChiefComplaint.trim());
+}
+
 function extractDuration(content: string): string | undefined {
   const normalized = content.toLowerCase();
   const explicit = normalized.match(
@@ -237,6 +247,37 @@ export function extractStructuredSymptomFacts(
   }
 
   return structuredFacts;
+}
+
+export function mergeStructuredSymptomFacts(
+  previous: StructuredSymptomFacts,
+  current: StructuredSymptomFacts,
+): StructuredSymptomFacts {
+  const merged: StructuredSymptomFacts = {
+    chiefComplaint: shouldKeepPreviousChiefComplaint(current.chiefComplaint)
+      ? (previous.chiefComplaint ?? current.chiefComplaint)
+      : current.chiefComplaint,
+    duration: current.duration ?? previous.duration,
+    severity: current.severity ?? previous.severity,
+    ageYears: current.ageYears ?? previous.ageYears,
+    temperatureC: current.temperatureC ?? previous.temperatureC,
+    symptomLocation: current.symptomLocation ?? previous.symptomLocation,
+    onset: current.onset ?? previous.onset,
+    associatedSymptoms: dedupe([
+      ...previous.associatedSymptoms,
+      ...current.associatedSymptoms,
+    ]),
+    missingRequiredFields: [],
+  };
+
+  if (!merged.chiefComplaint) {
+    merged.missingRequiredFields.push('chief_complaint');
+  }
+  if (!merged.duration) {
+    merged.missingRequiredFields.push('duration');
+  }
+
+  return merged;
 }
 
 export function runSymptomSafetyPrecheck(

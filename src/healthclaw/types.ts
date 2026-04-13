@@ -88,6 +88,7 @@ export interface MedicalTraceEvent {
   type:
     | 'template_classified'
     | 'structured_facts_extracted'
+    | 'follow_up_merged'
     | 'safety_precheck_completed'
     | 'patient_output_created'
     | 'expert_output_created';
@@ -103,6 +104,7 @@ export interface MedicalTrace {
   createdAt: string;
   updatedAt: string;
   status: 'draft' | 'completed';
+  parentTraceId?: string;
   userMessage: string;
   classification: TemplateClassification;
   safetyAssessment: SafetyAssessment;

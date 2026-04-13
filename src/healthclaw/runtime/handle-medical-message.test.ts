@@ -45,19 +45,41 @@ describe('HealthClaw runtime handler', () => {
     ]);
   });
 
-  it('requests missing details for lower-risk symptom complaints', () => {
+  it('keeps symptom traces in draft when required details are still missing', () => {
     const result = handleMedicalMessage({
       chatJid: 'test-chat',
       groupFolder: 'main',
       content: 'I have a rash on my arm.',
     });
 
-    expect(result.patientView.recommendedAction).toContain(
-      'follow-up questions',
-    );
+    expect(result.trace.status).toBe('draft');
     expect(result.patientView.missingInformation).toEqual(['duration']);
     expect(result.expertView.safetyAssessment.disposition).toBe(
       'routine_follow_up',
     );
+  });
+
+  it('merges a follow-up reply into the previous draft symptom trace', () => {
+    const first = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'I have a rash on my arm.',
+    });
+
+    const second = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'It has been there for 3 days and is getting worse.',
+    });
+
+    expect(first.trace.status).toBe('draft');
+    expect(second.trace.parentTraceId).toBe(first.trace.id);
+    expect(second.trace.status).toBe('completed');
+    expect(second.patientView.summary).toContain('Updated symptom triage');
+    expect(second.patientView.missingInformation).toEqual([]);
+    expect(second.expertView.extractedFacts).toContain('duration=3 days');
+
+    const events = getMedicalTraceEvents(second.trace.id);
+    expect(events.map((event) => event.type)).toContain('follow_up_merged');
   });
 });

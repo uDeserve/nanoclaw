@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSymptomTriageSummary,
   extractStructuredSymptomFacts,
+  mergeStructuredSymptomFacts,
   runSymptomSafetyPrecheck,
 } from './symptom.js';
 
@@ -46,5 +47,18 @@ describe('symptom triage extraction', () => {
 
     expect(safety.disposition).toBe('urgent_care');
     expect(summary.structuredFacts.temperatureC).toBeCloseTo(39, 0);
+  });
+
+  it('merges follow-up structured facts into the previous symptom case', () => {
+    const previous = extractStructuredSymptomFacts('I have a rash on my arm.');
+    const current = extractStructuredSymptomFacts(
+      'It has been there for 3 days and feels severe.',
+    );
+    const merged = mergeStructuredSymptomFacts(previous, current);
+
+    expect(merged.chiefComplaint).toContain('I have a rash');
+    expect(merged.duration).toBe('3 days');
+    expect(merged.severity).toBe('severe');
+    expect(merged.missingRequiredFields).toEqual([]);
   });
 });

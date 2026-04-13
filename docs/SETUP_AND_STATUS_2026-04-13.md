@@ -362,3 +362,62 @@ Why:
 - server conda env: `/data/lsj/conda-envs/healthclaw`
 - server docs directory: `/data/lsj/healthclaw/docs`
 - local archive root: `E:\healthclaw\healthclaw`
+
+## HealthClaw Multi-Turn Symptom Follow-Up Milestone
+
+The symptom-triage path can now continue a recent incomplete case instead of
+always treating each medical turn as a brand-new case.
+
+### What changed
+
+The host-side HealthClaw runtime now checks the latest symptom trace for the
+same chat and continues it when all of the following are true:
+
+- the previous trace is a symptom_triage
+- the previous trace is still missing required symptom details
+- the new message also routes into symptom_triage
+
+### New behavior
+
+When a user answers a follow-up question such as duration or severity, the
+runtime now:
+
+- reads the previous symptom trace
+- merges the newly extracted symptom facts into the older structured facts
+- preserves the earlier chief complaint when the new reply is only referential
+  (for example: it has been 3 days)
+- recomputes safety assessment from the merged facts
+- creates a new trace linked to the earlier one through parentTraceId
+- records a ollow_up_merged trace event
+
+### Status behavior
+
+Symptom traces now distinguish between:
+
+- draft: still missing required triage fields
+- completed: enough required information has been collected for the current
+  deterministic triage stage
+
+### Example
+
+Example progression now supported:
+
+1. user: I have a rash on my arm.
+2. system: asks for duration / missing details and stores a draft symptom trace
+3. user: It has been there for 3 days and is getting worse.
+4. system: merges this into the earlier symptom case, fills the duration field,
+   updates the patient/expert view, and stores a linked follow-up trace
+
+### Verification after this milestone
+
+Validated successfully on the server after the multi-turn follow-up changes:
+
+- 
+pm run build
+- 
+pm test
+
+Observed full test result at this milestone:
+
+- 24 test files passed
+- 271 tests passed

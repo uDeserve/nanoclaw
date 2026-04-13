@@ -1,10 +1,15 @@
 import { randomUUID } from 'crypto';
 
-import { appendMedicalTraceEvent, saveMedicalTrace } from '../../db.js';
+import {
+  appendMedicalTraceEvent,
+  getLatestMedicalTraceForChat,
+  saveMedicalTrace,
+} from '../../db.js';
 import { classifyMedicalTemplate } from '../templates/registry.js';
 import {
   buildSymptomTriageSummary,
   extractStructuredSymptomFacts,
+  mergeStructuredSymptomFacts,
   runSymptomSafetyPrecheck,
 } from '../triage/symptom.js';
 import {
@@ -52,7 +57,10 @@ function formatStructuredFacts(facts: StructuredSymptomFacts): string[] {
   return extractedFacts;
 }
 
-function buildPatientSummary(facts: StructuredSymptomFacts): string {
+function buildPatientSummary(
+  facts: StructuredSymptomFacts,
+  wasFollowUpMerge: boolean,
+): string {
   const parts: string[] = [];
 
   if (facts.chiefComplaint) {
@@ -71,13 +79,18 @@ function buildPatientSummary(facts: StructuredSymptomFacts): string {
     parts.push(`temperature about ${facts.temperatureC}C`);
   }
 
-  return `Initial symptom triage assessment: ${parts.join(', ')}`;
+  const prefix = wasFollowUpMerge
+    ? 'Updated symptom triage assessment'
+    : 'Initial symptom triage assessment';
+
+  return `${prefix}: ${parts.join(', ')}`;
 }
 
 function buildPatientView(
   summary: ReturnType<typeof buildSymptomTriageSummary>,
   safetyAssessment: ReturnType<typeof runSymptomSafetyPrecheck>,
   facts: StructuredSymptomFacts,
+  wasFollowUpMerge: boolean,
 ): PatientViewOutput {
   let recommendedAction: string;
   if (safetyAssessment.disposition === 'emergency_now') {
@@ -95,7 +108,7 @@ function buildPatientView(
   }
 
   return {
-    summary: buildPatientSummary(facts),
+    summary: buildPatientSummary(facts, wasFollowUpMerge),
     recommendedAction,
     followUpQuestions: summary.followUpQuestions,
     selfCareAdvice: summary.selfCareAdvice,
@@ -109,6 +122,7 @@ function buildExpertView(
   classification: ReturnType<typeof classifyMedicalTemplate>,
   safetyAssessment: ReturnType<typeof runSymptomSafetyPrecheck>,
   facts: StructuredSymptomFacts,
+  parentTraceId?: string,
 ): ExpertViewOutput {
   return {
     templateId: classification.templateId,
@@ -117,6 +131,7 @@ function buildExpertView(
       `raw_user_message=${input.content}`,
       `group_folder=${input.groupFolder}`,
       `chat_jid=${input.chatJid}`,
+      ...(parentTraceId ? [`parent_trace_id=${parentTraceId}`] : []),
     ],
     structuredFacts: facts,
     safetyAssessment,
@@ -124,12 +139,43 @@ function buildExpertView(
   };
 }
 
+function shouldContinuePreviousSymptomCase(
+  previousTrace: MedicalTrace | undefined,
+  classification: ReturnType<typeof classifyMedicalTemplate>,
+): previousTrace is MedicalTrace {
+  return (
+    previousTrace !== undefined &&
+    previousTrace.templateId === 'symptom_triage' &&
+    previousTrace.patientView.missingInformation.length > 0 &&
+    classification.templateId === 'symptom_triage'
+  );
+}
+
 export function handleMedicalMessage(
   input: MedicalRuntimeInput,
 ): MedicalRuntimeResult {
   const now = new Date().toISOString();
   const classification = classifyMedicalTemplate(input.content);
-  const structuredFacts = extractStructuredSymptomFacts(input.content);
+  const currentFacts = extractStructuredSymptomFacts(input.content);
+  const latestTrace = getLatestMedicalTraceForChat(
+    input.chatJid,
+    classification.templateId,
+  );
+
+  const continuingPreviousCase = shouldContinuePreviousSymptomCase(
+    latestTrace,
+    classification,
+  );
+  const structuredFacts = continuingPreviousCase
+    ? mergeStructuredSymptomFacts(
+        latestTrace.expertView.structuredFacts ?? {
+          associatedSymptoms: [],
+          missingRequiredFields: [],
+        },
+        currentFacts,
+      )
+    : currentFacts;
+
   const safetyAssessment = runSymptomSafetyPrecheck(
     input.content,
     structuredFacts,
@@ -143,12 +189,14 @@ export function handleMedicalMessage(
     triageSummary,
     safetyAssessment,
     structuredFacts,
+    continuingPreviousCase,
   );
   const expertView = buildExpertView(
     input,
     classification,
     safetyAssessment,
     structuredFacts,
+    continuingPreviousCase ? latestTrace.id : undefined,
   );
 
   const trace: MedicalTrace = {
@@ -158,7 +206,12 @@ export function handleMedicalMessage(
     templateId: classification.templateId,
     createdAt: now,
     updatedAt: now,
-    status: 'completed',
+    status:
+      classification.templateId === 'symptom_triage' &&
+      structuredFacts.missingRequiredFields.length > 0
+        ? 'draft'
+        : 'completed',
+    parentTraceId: continuingPreviousCase ? latestTrace.id : undefined,
     userMessage: input.content,
     classification,
     safetyAssessment,
@@ -196,6 +249,19 @@ export function handleMedicalMessage(
           ...structuredFacts,
         },
       },
+      ...(continuingPreviousCase
+        ? [
+            {
+              type: 'follow_up_merged' as const,
+              createdAt: now,
+              payload: {
+                parentTraceId: latestTrace.id,
+                previousMissingInformation:
+                  latestTrace.patientView.missingInformation,
+              },
+            },
+          ]
+        : []),
       {
         type: 'safety_precheck_completed',
         createdAt: now,
