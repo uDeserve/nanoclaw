@@ -22,6 +22,7 @@ describe('HealthClaw runtime handler', () => {
 
     expect(result.patientView.recommendedAction).toContain('Seek emergency');
     expect(result.patientView.missingInformation).toEqual([]);
+    expect(result.patientView.nextStepFocus).toEqual([]);
     expect(result.expertView.safetyAssessment.disposition).toBe(
       'emergency_now',
     );
@@ -40,6 +41,7 @@ describe('HealthClaw runtime handler', () => {
       'template_classified',
       'structured_facts_extracted',
       'safety_precheck_completed',
+      'follow_up_plan_created',
       'patient_output_created',
       'expert_output_created',
     ]);
@@ -54,6 +56,12 @@ describe('HealthClaw runtime handler', () => {
 
     expect(result.trace.status).toBe('draft');
     expect(result.patientView.missingInformation).toEqual(['duration']);
+    expect(result.patientView.nextStepFocus).toContain(
+      'clarify how long the symptom has been present',
+    );
+    expect(result.expertView.followUpPlan).toContain(
+      'clarify current severity',
+    );
     expect(result.expertView.safetyAssessment.disposition).toBe(
       'routine_follow_up',
     );
@@ -77,9 +85,15 @@ describe('HealthClaw runtime handler', () => {
     expect(second.trace.status).toBe('completed');
     expect(second.patientView.summary).toContain('Updated symptom triage');
     expect(second.patientView.missingInformation).toEqual([]);
+    expect(second.patientView.nextStepFocus).toEqual([
+      'clarify current severity',
+    ]);
     expect(second.expertView.extractedFacts).toContain('duration=3 days');
 
     const events = getMedicalTraceEvents(second.trace.id);
     expect(events.map((event) => event.type)).toContain('follow_up_merged');
+    expect(events.map((event) => event.type)).toContain(
+      'follow_up_plan_created',
+    );
   });
 });

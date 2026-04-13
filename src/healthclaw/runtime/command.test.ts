@@ -27,6 +27,7 @@ describe('HealthClaw patient formatting', () => {
       summary:
         'Initial symptom triage assessment: possible emergency red flag symptoms',
       recommendedAction: 'Escalate to in-person evaluation now.',
+      nextStepFocus: ['clarify how long the symptom has been present'],
       followUpQuestions: ['When did this start?'],
       selfCareAdvice: ['Do not delay in-person emergency evaluation.'],
       safetyWarnings: ['possible chest pain emergency'],
@@ -37,6 +38,7 @@ describe('HealthClaw patient formatting', () => {
     expect(text).toContain(
       'Recommended action: Escalate to in-person evaluation now.',
     );
+    expect(text).toContain('Next-step focus:');
     expect(text).toContain('- When did this start?');
   });
 });

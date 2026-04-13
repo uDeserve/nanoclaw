@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildSymptomFollowUpPlan,
   buildSymptomTriageSummary,
   extractStructuredSymptomFacts,
   mergeStructuredSymptomFacts,
@@ -60,5 +61,20 @@ describe('symptom triage extraction', () => {
     expect(merged.duration).toBe('3 days');
     expect(merged.severity).toBe('severe');
     expect(merged.missingRequiredFields).toEqual([]);
+  });
+
+  it('builds a targeted follow-up plan from missing fields and symptom context', () => {
+    const facts = extractStructuredSymptomFacts(
+      'I have fever and cough on my arm.',
+    );
+    const safety = runSymptomSafetyPrecheck(
+      'I have fever and cough on my arm.',
+      facts,
+    );
+    const plan = buildSymptomFollowUpPlan(facts, safety);
+
+    expect(plan).toContain('clarify how long the symptom has been present');
+    expect(plan).toContain('clarify current severity');
+    expect(plan).toContain('clarify measured temperature if available');
   });
 });

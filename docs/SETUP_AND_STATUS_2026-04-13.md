@@ -421,3 +421,63 @@ Observed full test result at this milestone:
 
 - 24 test files passed
 - 271 tests passed
+
+## HealthClaw Follow-Up Planner Milestone
+
+The symptom-triage path now produces a more explicit next-step follow-up plan
+instead of only exposing missing fields.
+
+### What changed
+
+A deterministic follow-up planner was added on top of the existing symptom
+structuring and multi-turn case flow.
+
+The runtime now converts missing or still-important fields into a focused
+next-step plan, for example:
+
+- clarify the main symptom
+- clarify how long the symptom has been present
+- clarify current severity
+- clarify measured temperature if available
+
+### Output improvements
+
+Patient-facing output now includes:
+
+- 
+extStepFocus
+- clearer targeted follow-up direction before the question list
+
+Expert-facing output now includes:
+
+- ollowUpPlan
+
+Trace behavior now also includes:
+
+- ollow_up_plan_created
+
+### Example
+
+If the user says:
+
+- I have a rash on my arm.
+
+The system can now produce not only missingInformation = ['duration'], but
+also a more actionable next-step plan such as:
+
+- clarify how long the symptom has been present
+- clarify current severity
+
+### Verification after this milestone
+
+Validated successfully on the server after the follow-up planner changes:
+
+- 
+pm run build
+- 
+pm test
+
+Observed full test result at this milestone:
+
+- 24 test files passed
+- 272 tests passed

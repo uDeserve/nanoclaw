@@ -24,6 +24,13 @@ export function formatPatientViewMessage(view: PatientViewOutput): string {
     `Recommended action: ${view.recommendedAction}`,
   ];
 
+  if (view.nextStepFocus.length > 0) {
+    lines.push('Next-step focus:');
+    for (const item of view.nextStepFocus) {
+      lines.push(`- ${item}`);
+    }
+  }
+
   if (view.missingInformation.length > 0) {
     lines.push('Missing information:');
     for (const item of view.missingInformation) {

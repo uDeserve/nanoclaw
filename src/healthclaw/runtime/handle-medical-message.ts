@@ -8,6 +8,7 @@ import {
 import { classifyMedicalTemplate } from '../templates/registry.js';
 import {
   buildSymptomTriageSummary,
+  buildSymptomFollowUpPlan,
   extractStructuredSymptomFacts,
   mergeStructuredSymptomFacts,
   runSymptomSafetyPrecheck,
@@ -91,6 +92,7 @@ function buildPatientView(
   safetyAssessment: ReturnType<typeof runSymptomSafetyPrecheck>,
   facts: StructuredSymptomFacts,
   wasFollowUpMerge: boolean,
+  followUpPlan: string[],
 ): PatientViewOutput {
   let recommendedAction: string;
   if (safetyAssessment.disposition === 'emergency_now') {
@@ -110,6 +112,7 @@ function buildPatientView(
   return {
     summary: buildPatientSummary(facts, wasFollowUpMerge),
     recommendedAction,
+    nextStepFocus: followUpPlan,
     followUpQuestions: summary.followUpQuestions,
     selfCareAdvice: summary.selfCareAdvice,
     safetyWarnings: safetyAssessment.redFlags,
@@ -122,6 +125,7 @@ function buildExpertView(
   classification: ReturnType<typeof classifyMedicalTemplate>,
   safetyAssessment: ReturnType<typeof runSymptomSafetyPrecheck>,
   facts: StructuredSymptomFacts,
+  followUpPlan: string[],
   parentTraceId?: string,
 ): ExpertViewOutput {
   return {
@@ -136,6 +140,7 @@ function buildExpertView(
     structuredFacts: facts,
     safetyAssessment,
     routingReason: classification.reasons,
+    followUpPlan,
   };
 }
 
@@ -185,17 +190,23 @@ export function handleMedicalMessage(
     safetyAssessment,
     structuredFacts,
   );
+  const followUpPlan = buildSymptomFollowUpPlan(
+    structuredFacts,
+    safetyAssessment,
+  );
   const patientView = buildPatientView(
     triageSummary,
     safetyAssessment,
     structuredFacts,
     continuingPreviousCase,
+    followUpPlan,
   );
   const expertView = buildExpertView(
     input,
     classification,
     safetyAssessment,
     structuredFacts,
+    followUpPlan,
     continuingPreviousCase ? latestTrace.id : undefined,
   );
 
@@ -272,11 +283,20 @@ export function handleMedicalMessage(
         },
       },
       {
+        type: 'follow_up_plan_created',
+        createdAt: now,
+        payload: {
+          followUpPlan,
+          followUpQuestions: patientView.followUpQuestions,
+        },
+      },
+      {
         type: 'patient_output_created',
         createdAt: now,
         payload: {
           recommendedAction: patientView.recommendedAction,
           missingInformation: patientView.missingInformation,
+          nextStepFocus: patientView.nextStepFocus,
         },
       },
       {

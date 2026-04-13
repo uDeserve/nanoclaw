@@ -5,6 +5,11 @@ import {
   SymptomTriageSummary,
 } from '../types.js';
 
+const FOLLOW_UP_FIELD_PLAN: Record<string, string> = {
+  chief_complaint: 'clarify the main symptom',
+  duration: 'clarify how long the symptom has been present',
+};
+
 const ASSOCIATED_SYMPTOM_KEYWORDS = [
   'fever',
   'cough',
@@ -221,6 +226,28 @@ function extractOnset(content: string): string | undefined {
   return undefined;
 }
 
+export function buildSymptomFollowUpPlan(
+  facts: StructuredSymptomFacts,
+  safety: SafetyAssessment,
+): string[] {
+  const plan: string[] = facts.missingRequiredFields.map(
+    (field) => FOLLOW_UP_FIELD_PLAN[field] ?? `clarify ${field}`,
+  );
+
+  if (!facts.severity && safety.disposition !== 'emergency_now') {
+    plan.push('clarify current severity');
+  }
+  if (
+    !facts.temperatureC &&
+    (facts.associatedSymptoms.includes('fever') ||
+      facts.associatedSymptoms.includes('cough'))
+  ) {
+    plan.push('clarify measured temperature if available');
+  }
+
+  return dedupe(plan);
+}
+
 export function extractStructuredSymptomFacts(
   content: string,
 ): StructuredSymptomFacts {
@@ -396,6 +423,14 @@ export function buildSymptomTriageSummary(
       : `Has this been constant over the last ${facts.duration}?`,
     'What makes it better or worse?',
   ];
+
+  if (!facts.severity) {
+    followUpQuestions.splice(
+      2,
+      0,
+      'How severe is it right now: mild, moderate, or severe?',
+    );
+  }
 
   return {
     symptomSummary: trimmed,

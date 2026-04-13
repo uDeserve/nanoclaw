@@ -65,6 +65,7 @@ export interface SymptomTriageSummary {
 export interface PatientViewOutput {
   summary: string;
   recommendedAction: string;
+  nextStepFocus: string[];
   followUpQuestions: string[];
   selfCareAdvice: string[];
   safetyWarnings: string[];
@@ -77,6 +78,7 @@ export interface ExpertViewOutput {
   structuredFacts?: StructuredSymptomFacts;
   safetyAssessment: SafetyAssessment;
   routingReason: string[];
+  followUpPlan: string[];
 }
 
 export interface MedicalEvidenceLink {
@@ -89,6 +91,7 @@ export interface MedicalTraceEvent {
     | 'template_classified'
     | 'structured_facts_extracted'
     | 'follow_up_merged'
+    | 'follow_up_plan_created'
     | 'safety_precheck_completed'
     | 'patient_output_created'
     | 'expert_output_created';
