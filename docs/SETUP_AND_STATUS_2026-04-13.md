@@ -391,3 +391,54 @@ Observed full test result at this milestone:
 
 - 23 test files passed
 - 264 tests passed
+
+## HealthClaw Auto Routing Milestone
+
+HealthClaw is no longer limited to explicit /healthclaw commands.
+
+### What changed
+
+A new host-side routing decision layer was added under:
+
+- src/healthclaw/runtime/routing.ts
+
+This layer now supports two routing sources:
+
+- command: explicit /healthclaw ...
+- uto: ordinary user messages that look medically relevant
+
+### Current routing policy
+
+HealthClaw still requires HEALTHCLAW_ENABLED=true.
+
+Automatic routing is separately gated by:
+
+- HEALTHCLAW_AUTO_ROUTE=true
+
+Current behavior:
+
+- explicit /healthclaw commands always take priority
+- ordinary messages are auto-routed only when they show strong medical evidence
+- generic non-medical chat is left on the original NanoClaw path
+- slash-prefixed commands other than /healthclaw are not auto-routed
+
+The current auto-routing heuristic uses:
+
+- template classification confidence for medication/report/imaging requests
+- structured symptom facts
+- deterministic safety red flags
+- symptom evidence scoring
+
+### Verification after this milestone
+
+Validated successfully on the server after the routing changes:
+
+- 
+pm run build
+- 
+pm test
+
+Observed full test result at this milestone:
+
+- 24 test files passed
+- 269 tests passed

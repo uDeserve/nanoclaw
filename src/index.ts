@@ -7,6 +7,7 @@ import {
   DEFAULT_TRIGGER,
   getTriggerPattern,
   GROUPS_DIR,
+  HEALTHCLAW_AUTO_ROUTE,
   HEALTHCLAW_ENABLED,
   IDLE_TIMEOUT,
   MAX_MESSAGES_PER_PROMPT,
@@ -67,10 +68,8 @@ import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
 import { logger } from './logger.js';
 import { handleMedicalMessage } from './healthclaw/runtime/handle-medical-message.js';
-import {
-  extractHealthClawCommand,
-  formatPatientViewMessage,
-} from './healthclaw/runtime/command.js';
+import { formatPatientViewMessage } from './healthclaw/runtime/command.js';
+import { detectHealthClawRoute } from './healthclaw/runtime/routing.js';
 
 // Re-export for backwards compatibility during refactor
 export { escapeXml, formatMessages } from './router.js';
@@ -234,8 +233,8 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   }
 
   const prompt = formatMessages(missedMessages, TIMEZONE);
-  const healthClawCommand = HEALTHCLAW_ENABLED
-    ? extractHealthClawCommand(missedMessages)
+  const healthClawRoute = HEALTHCLAW_ENABLED
+    ? detectHealthClawRoute(missedMessages, HEALTHCLAW_AUTO_ROUTE)
     : undefined;
 
   // Advance cursor so the piping path in startMessageLoop won't re-fetch
@@ -268,12 +267,12 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   let hadError = false;
   let outputSentToUser = false;
 
-  if (healthClawCommand) {
+  if (healthClawRoute) {
     try {
       const medicalResult = handleMedicalMessage({
         chatJid,
         groupFolder: group.folder,
-        content: healthClawCommand,
+        content: healthClawRoute.content,
       });
       await channel.sendMessage(
         chatJid,
@@ -284,6 +283,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
           group: group.name,
           traceId: medicalResult.trace.id,
           templateId: medicalResult.trace.templateId,
+          routeSource: healthClawRoute.source,
         },
         'HealthClaw host-side handler completed',
       );
