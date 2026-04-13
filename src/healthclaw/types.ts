@@ -12,6 +12,8 @@ export type SafetyDisposition =
 
 export type SafetyLevel = 'low' | 'moderate' | 'high' | 'critical';
 
+export type SymptomSeverity = 'mild' | 'moderate' | 'severe';
+
 export interface TemplateFieldDefinition {
   key: string;
   label: string;
@@ -33,6 +35,18 @@ export interface TemplateClassification {
   reasons: string[];
 }
 
+export interface StructuredSymptomFacts {
+  chiefComplaint?: string;
+  duration?: string;
+  severity?: SymptomSeverity;
+  ageYears?: number;
+  temperatureC?: number;
+  symptomLocation?: string;
+  onset?: string;
+  associatedSymptoms: string[];
+  missingRequiredFields: string[];
+}
+
 export interface SafetyAssessment {
   level: SafetyLevel;
   disposition: SafetyDisposition;
@@ -45,6 +59,7 @@ export interface SymptomTriageSummary {
   likelyConcern: string;
   followUpQuestions: string[];
   selfCareAdvice: string[];
+  structuredFacts: StructuredSymptomFacts;
 }
 
 export interface PatientViewOutput {
@@ -53,23 +68,26 @@ export interface PatientViewOutput {
   followUpQuestions: string[];
   selfCareAdvice: string[];
   safetyWarnings: string[];
+  missingInformation: string[];
 }
 
 export interface ExpertViewOutput {
   templateId: MedicalTaskTemplateId;
   extractedFacts: string[];
+  structuredFacts?: StructuredSymptomFacts;
   safetyAssessment: SafetyAssessment;
   routingReason: string[];
 }
 
 export interface MedicalEvidenceLink {
-  kind: 'user_statement' | 'rule';
+  kind: 'user_statement' | 'rule' | 'extracted_fact';
   detail: string;
 }
 
 export interface MedicalTraceEvent {
   type:
     | 'template_classified'
+    | 'structured_facts_extracted'
     | 'safety_precheck_completed'
     | 'patient_output_created'
     | 'expert_output_created';

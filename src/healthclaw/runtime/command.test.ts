@@ -30,6 +30,7 @@ describe('HealthClaw patient formatting', () => {
       followUpQuestions: ['When did this start?'],
       selfCareAdvice: ['Do not delay in-person emergency evaluation.'],
       safetyWarnings: ['possible chest pain emergency'],
+      missingInformation: [],
     });
 
     expect(text).toContain('[HealthClaw Symptom Triage]');

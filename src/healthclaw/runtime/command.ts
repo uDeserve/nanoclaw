@@ -24,6 +24,13 @@ export function formatPatientViewMessage(view: PatientViewOutput): string {
     `Recommended action: ${view.recommendedAction}`,
   ];
 
+  if (view.missingInformation.length > 0) {
+    lines.push('Missing information:');
+    for (const item of view.missingInformation) {
+      lines.push(`- ${item}`);
+    }
+  }
+
   if (view.followUpQuestions.length > 0) {
     lines.push('Follow-up questions:');
     for (const question of view.followUpQuestions) {

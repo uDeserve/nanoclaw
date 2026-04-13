@@ -332,3 +332,62 @@ Primary code source of truth:
 Primary remote backup target:
 
 - origin -> https://github.com/uDeserve/NanoClaw.git
+
+## HealthClaw Symptom Structuring Milestone
+
+The symptom-triage path has now been strengthened beyond simple keyword routing.
+
+### What changed
+
+The host-side HealthClaw runtime now performs deterministic symptom fact
+extraction before triage output generation.
+
+New structured fields now extracted when present:
+
+- chief complaint
+- duration
+- severity
+- age
+- temperature
+- symptom location
+- onset style
+- associated symptoms
+- missing required fields
+
+### Safety and output improvements
+
+The deterministic symptom precheck was extended to use both keywords and
+structured facts.
+
+New behavior now includes:
+
+- high-fever escalation using measured temperature parsing
+- urgent-care escalation for severe pain in sensitive locations
+- additional emergency keyword coverage such as loss of consciousness and seizure
+- clearer patient-facing handling when required symptom details are still missing
+
+Patient-facing output now includes:
+
+- a summary built from extracted symptom facts
+- missing-information fields when duration or chief complaint detail is absent
+- better follow-up questions tied to what is missing
+
+Expert-facing output and stored trace now include:
+
+- structured symptom facts
+- extracted fact strings
+- a dedicated structured_facts_extracted trace event
+
+### Verification after this milestone
+
+Validated successfully on the server after the symptom structuring changes:
+
+- 
+pm run build
+- 
+pm test
+
+Observed full test result at this milestone:
+
+- 23 test files passed
+- 264 tests passed
