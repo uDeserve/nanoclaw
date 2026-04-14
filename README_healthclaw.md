@@ -49,6 +49,22 @@ Read these in order:
 3. `docs/HEALTHCLAW_KNOWLEDGE_STRATEGY.md`
    - how medical knowledge, local rules, and external APIs should be used
 
+## Additional Strategic Reading
+
+These documents refine the updated medium-term direction after the current
+symptom-triage and first medication-consult milestones:
+
+4. `docs/HEALTHCLAW_RESEARCH_DIRECTION_2026-04.md`
+   - updated research positioning
+   - why Claw matters for HealthClaw
+   - how recent agent papers and a light LangChain reading should influence the
+     project direction
+
+5. `docs/HEALTHCLAW_NEXT_PHASE_PLAN_2026-04.md`
+   - next concrete development phases
+   - what the team should implement next
+   - near-term ordering and acceptance criteria
+
 ## Product / Concept Documents To Understand Intent
 
 These project-level concept docs live outside this repo in the broader
