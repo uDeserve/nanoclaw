@@ -18,8 +18,9 @@ export function extractHealthClawCommand(
 }
 
 export function formatPatientViewMessage(view: PatientViewOutput): string {
+  const templateLabel = view.templateLabel || 'Symptom Triage';
   const lines = [
-    '[HealthClaw Symptom Triage]',
+    `[HealthClaw ${templateLabel}]`,
     `Summary: ${view.summary}`,
     `Recommended action: ${view.recommendedAction}`,
   ];

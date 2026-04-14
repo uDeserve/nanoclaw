@@ -13,6 +13,13 @@ export type SafetyDisposition =
 export type SafetyLevel = 'low' | 'moderate' | 'high' | 'critical';
 
 export type SymptomSeverity = 'mild' | 'moderate' | 'severe';
+export type MedicationQuestionType =
+  | 'interaction_check'
+  | 'dose_question'
+  | 'missed_dose'
+  | 'side_effect'
+  | 'general_precaution';
+export type PregnancyStatus = 'pregnant' | 'not_pregnant' | 'unknown';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -47,6 +54,20 @@ export interface StructuredSymptomFacts {
   missingRequiredFields: string[];
 }
 
+export interface StructuredMedicationFacts {
+  medicationNames: string[];
+  questionType: MedicationQuestionType;
+  doseText?: string;
+  frequency?: string;
+  formulation?: string;
+  ageYears?: number;
+  pregnancyStatus?: PregnancyStatus;
+  allergyHistory: string[];
+  otherMedications: string[];
+  symptoms: string[];
+  missingRequiredFields: string[];
+}
+
 export interface SafetyAssessment {
   level: SafetyLevel;
   disposition: SafetyDisposition;
@@ -63,6 +84,7 @@ export interface SymptomTriageSummary {
 }
 
 export interface PatientViewOutput {
+  templateLabel?: string;
   summary: string;
   recommendedAction: string;
   nextStepFocus: string[];
@@ -75,7 +97,8 @@ export interface PatientViewOutput {
 export interface ExpertViewOutput {
   templateId: MedicalTaskTemplateId;
   extractedFacts: string[];
-  structuredFacts?: StructuredSymptomFacts;
+  structuredSymptomFacts?: StructuredSymptomFacts;
+  structuredMedicationFacts?: StructuredMedicationFacts;
   safetyAssessment: SafetyAssessment;
   routingReason: string[];
   followUpPlan: string[];

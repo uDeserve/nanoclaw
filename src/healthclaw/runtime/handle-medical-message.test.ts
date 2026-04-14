@@ -23,16 +23,17 @@ describe('HealthClaw runtime handler', () => {
     expect(result.patientView.recommendedAction).toContain('Seek emergency');
     expect(result.patientView.missingInformation).toEqual([]);
     expect(result.patientView.nextStepFocus).toEqual([]);
+    expect(result.patientView.templateLabel).toBe('Symptom Triage');
     expect(result.expertView.safetyAssessment.disposition).toBe(
       'emergency_now',
     );
-    expect(result.expertView.structuredFacts?.ageYears).toBe(67);
+    expect(result.expertView.structuredSymptomFacts?.ageYears).toBe(67);
     expect(result.expertView.extractedFacts).toContain('duration=2 hours');
 
     const storedTrace = getMedicalTrace(result.trace.id);
     expect(storedTrace?.chatJid).toBe('test-chat');
     expect(storedTrace?.templateId).toBe('symptom_triage');
-    expect(storedTrace?.expertView.structuredFacts?.symptomLocation).toBe(
+    expect(storedTrace?.expertView.structuredSymptomFacts?.symptomLocation).toBe(
       'chest',
     );
 
@@ -94,6 +95,40 @@ describe('HealthClaw runtime handler', () => {
     expect(events.map((event) => event.type)).toContain('follow_up_merged');
     expect(events.map((event) => event.type)).toContain(
       'follow_up_plan_created',
+    );
+  });
+
+  it('creates a medication consult trace with deterministic interaction guidance', () => {
+    const result = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'Can I take warfarin with ibuprofen 200 mg tablets?',
+    });
+
+    expect(result.trace.templateId).toBe('medication_consult');
+    expect(result.trace.status).toBe('completed');
+    expect(result.patientView.templateLabel).toBe('Medication Consult');
+    expect(result.patientView.recommendedAction).toContain('urgent');
+    expect(result.expertView.structuredMedicationFacts?.medicationNames).toEqual(
+      ['warfarin', 'ibuprofen'],
+    );
+    expect(result.expertView.safetyAssessment.redFlags).toContain(
+      'high-risk anticoagulant and pain-reliever combination',
+    );
+  });
+
+  it('keeps medication consult traces in draft when drug details are missing', () => {
+    const result = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'Can I take this medicine together with another one?',
+    });
+
+    expect(result.trace.templateId).toBe('medication_consult');
+    expect(result.trace.status).toBe('draft');
+    expect(result.patientView.missingInformation).toContain('medication_name');
+    expect(result.patientView.nextStepFocus).toContain(
+      'clarify the exact medication name',
     );
   });
 });

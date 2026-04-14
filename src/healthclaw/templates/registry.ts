@@ -66,7 +66,22 @@ const TEMPLATE_SIGNALS: Array<{
   {
     templateId: 'medication_consult',
     confidence: 0.82,
-    keywords: ['medication', 'medicine', 'dose', 'tablet', 'capsule', 'drug'],
+    keywords: [
+      'medication',
+      'medicine',
+      'dose',
+      'tablet',
+      'capsule',
+      'drug',
+      'missed dose',
+      'warfarin',
+      'ibuprofen',
+      'aspirin',
+      'acetaminophen',
+      'tylenol',
+      'metformin',
+      'amoxicillin',
+    ],
   },
   {
     templateId: 'report_interpretation',

@@ -77,6 +77,8 @@ Already implemented in code:
 - template classification skeleton
 - deterministic symptom structuring
 - deterministic symptom safety precheck
+- deterministic medication question structuring
+- deterministic medication safety precheck
 - patient-facing output
 - expert-facing output
 - structured medical trace persistence in SQLite
@@ -116,16 +118,16 @@ Behavior:
 
 Not done yet:
 
-- multi-turn symptom case completion
 - deep medication consult logic
 - deep report interpretation logic
 - deep imaging QA logic
 - external medical knowledge provider integration
 - case-level memory stitching across turns
 
-The current strongest path is:
+The current strongest implemented paths are:
 
 - `symptom_triage`
+- `medication_consult` (first host-side version)
 
 ## Runtime / Environment Notes
 
@@ -162,9 +164,10 @@ If you are the next agent or contributor:
 
 The currently recommended next milestone is:
 
-- multi-turn symptom triage completion
+- strengthen medication consult with structured local reference data and
+  additional deterministic safety rules
 
 Reason:
 
-- it turns current single-turn symptom extraction and follow-up prompts into a
-  real continuing medical case flow
+- the first medication consult path now exists, so the next highest-value work
+  is to make that path safer and more useful before broadening scope

@@ -300,6 +300,8 @@ The current HealthClaw implementation already provides:
   - `imaging_qa`
 - deterministic symptom structuring
 - deterministic red-flag precheck
+- deterministic medication question structuring
+- deterministic medication safety precheck
 - patient-facing output
 - expert-facing output
 - structured trace persistence in SQLite
@@ -308,8 +310,7 @@ The current HealthClaw implementation already provides:
 
 Important gaps still remaining:
 
-- multi-turn case completion is not implemented yet
-- medication/report/imaging paths are mostly routing skeletons, not deep logic
+- medication/report/imaging paths are still early compared with the symptom path
 - evidence grounding is still limited to:
   - user statements
   - deterministic rules
@@ -348,13 +349,13 @@ Planned layers:
 
 Most valuable next milestone:
 
-- implement multi-turn symptom triage completion
+- strengthen `medication_consult` with richer deterministic safety rules and
+  structured local medication reference support
 
 Why:
 
-- it turns current follow-up questions into a real continuing medical case flow
-- it makes the existing extraction, safety logic, patient view, expert view, and
-  trace system work across multiple turns instead of isolated single messages
+- the first host-side medication path now exists, so the next best use of time
+  is improving depth and safety on that second core task before broadening scope
 
 ## Paths To Remember
 
@@ -481,3 +482,77 @@ Observed full test result at this milestone:
 
 - 24 test files passed
 - 272 tests passed
+
+## HealthClaw Medication Consult Milestone
+
+The first real `medication_consult` path now exists as a host-side deterministic
+HealthClaw flow instead of only a template-routing skeleton.
+
+### What changed
+
+Added a new medication consult helper module under:
+
+- `src/healthclaw/medication/consult.ts`
+- `src/healthclaw/medication/consult.test.ts`
+
+The host-side runtime can now:
+
+- identify common medication names from the user message
+- classify the medication question type
+  - interaction check
+  - dose question
+  - missed dose
+  - side effect
+  - general precaution
+- extract dose and formulation when present
+- detect missing critical fields such as exact medication name or second
+  medication for an interaction question
+- run deterministic medication safety precheck rules
+- produce patient-facing and expert-facing medication outputs
+- persist medication consult traces through the same trace pipeline
+
+### First deterministic medication safety rules
+
+Current medication safety coverage includes:
+
+- severe medication-reaction emergency wording
+- overdose wording
+- high-risk `warfarin` plus `ibuprofen` / `aspirin` interaction rule
+- pregnancy-related `ibuprofen` caution rule
+
+### Runtime integration
+
+`src/healthclaw/runtime/handle-medical-message.ts` now branches by template:
+
+- `medication_consult` uses the medication handler path
+- `symptom_triage` continues to use the symptom handler path
+
+### Output behavior
+
+Patient-facing output now supports a medication consult label and includes:
+
+- summary
+- recommended action
+- next-step focus
+- follow-up questions
+- self-care advice
+- safety warnings
+
+Expert-facing output and trace now include:
+
+- structured medication facts
+- medication extracted fact strings
+- medication follow-up planning through existing trace events
+
+### Verification after this milestone
+
+Validated successfully on the server on `2026-04-14` after the medication
+consult changes:
+
+- `npm run build`
+- `npm test`
+
+Observed full test result at this milestone:
+
+- 25 test files passed
+- 278 tests passed

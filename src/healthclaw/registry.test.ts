@@ -16,6 +16,14 @@ describe('HealthClaw template registry', () => {
     expect(result.confidence).toBeGreaterThan(0.8);
   });
 
+  it('classifies common drug-name questions as medication consults', () => {
+    const result = classifyMedicalTemplate(
+      'Can I take warfarin with ibuprofen?',
+    );
+
+    expect(result.templateId).toBe('medication_consult');
+  });
+
   it('defaults to symptom triage when no stronger template matches', () => {
     const result = classifyMedicalTemplate(
       'I have a headache and sore throat.',
