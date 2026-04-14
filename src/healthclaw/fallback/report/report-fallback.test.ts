@@ -39,7 +39,11 @@ describe('HealthClaw report fallback helpers', () => {
     const summary = buildReportInterpretationSummary(content, safety, facts);
 
     expect(facts.missingRequiredFields).toContain('report_text');
-    expect(followUpPlan).toContain('paste the key report lines or impression text');
-    expect(summary.followUpQuestions[0]).toContain('paste the report impression');
+    expect(followUpPlan).toContain(
+      'paste the key report lines or impression text',
+    );
+    expect(summary.followUpQuestions[0]).toContain(
+      'paste the report impression',
+    );
   });
 });

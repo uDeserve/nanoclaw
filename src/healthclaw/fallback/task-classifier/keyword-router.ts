@@ -1,7 +1,4 @@
-import {
-  MedicalTaskTemplateId,
-  TemplateClassification,
-} from '../../types.js';
+import { MedicalTaskTemplateId, TemplateClassification } from '../../types.js';
 
 const TEMPLATE_SIGNALS: Array<{
   templateId: MedicalTaskTemplateId;

@@ -1,7 +1,4 @@
-import {
-  StructuredSymptomFacts,
-  SymptomSeverity,
-} from '../../types.js';
+import { StructuredSymptomFacts, SymptomSeverity } from '../../types.js';
 
 const ASSOCIATED_SYMPTOM_KEYWORDS = [
   'fever',

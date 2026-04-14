@@ -33,9 +33,9 @@ describe('HealthClaw runtime handler', () => {
     const storedTrace = getMedicalTrace(result.trace.id);
     expect(storedTrace?.chatJid).toBe('test-chat');
     expect(storedTrace?.templateId).toBe('symptom_triage');
-    expect(storedTrace?.expertView.structuredSymptomFacts?.symptomLocation).toBe(
-      'chest',
-    );
+    expect(
+      storedTrace?.expertView.structuredSymptomFacts?.symptomLocation,
+    ).toBe('chest');
     expect(storedTrace?.caseState.taskType).toBe('symptom_triage');
     expect(storedTrace?.caseState.riskLevel).toBe('critical');
 
@@ -117,15 +117,17 @@ describe('HealthClaw runtime handler', () => {
     expect(result.trace.caseState.knownStructuredFacts.questionType).toBe(
       'interaction_check',
     );
-    expect(result.expertView.structuredMedicationFacts?.medicationNames).toEqual(
-      ['warfarin', 'ibuprofen'],
-    );
+    expect(
+      result.expertView.structuredMedicationFacts?.medicationNames,
+    ).toEqual(['warfarin', 'ibuprofen']);
     expect(result.expertView.safetyAssessment.redFlags).toContain(
       'high-risk anticoagulant and pain-reliever combination',
     );
-    expect(result.expertView.extractedFacts.some((fact) =>
-      fact.includes('interaction_rule=warfarin+ibuprofen'),
-    )).toBe(true);
+    expect(
+      result.expertView.extractedFacts.some((fact) =>
+        fact.includes('interaction_rule=warfarin+ibuprofen'),
+      ),
+    ).toBe(true);
   });
 
   it('keeps medication consult traces in draft when drug details are missing', () => {
@@ -161,9 +163,9 @@ describe('HealthClaw runtime handler', () => {
     expect(second.trace.status).toBe('completed');
     expect(second.patientView.summary).toContain('Updated medication consult');
     expect(second.patientView.missingInformation).toEqual([]);
-    expect(second.expertView.structuredMedicationFacts?.medicationNames).toEqual(
-      ['warfarin', 'ibuprofen'],
-    );
+    expect(
+      second.expertView.structuredMedicationFacts?.medicationNames,
+    ).toEqual(['warfarin', 'ibuprofen']);
     expect(second.expertView.extractedFacts).toContain(
       `parent_trace_id=${first.trace.id}`,
     );
@@ -195,7 +197,8 @@ describe('HealthClaw runtime handler', () => {
     const result = handleMedicalMessage({
       chatJid: 'test-chat',
       groupFolder: 'main',
-      content: 'CBC report: hemoglobin 8.2, WBC 14.5, impression: anemia workup needed.',
+      content:
+        'CBC report: hemoglobin 8.2, WBC 14.5, impression: anemia workup needed.',
     });
 
     expect(result.trace.templateId).toBe('report_interpretation');

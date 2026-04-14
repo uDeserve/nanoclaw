@@ -1,8 +1,6 @@
 import { NewMessage } from '../../types.js';
 import { classifyMedicalTemplate } from '../agents/router/router-agent.js';
-import {
-  extractStructuredSymptomFacts,
-} from '../fallback/symptom/symptom-facts.js';
+import { extractStructuredSymptomFacts } from '../fallback/symptom/symptom-facts.js';
 import { runSymptomSafetyPrecheck } from '../safety/symptom/red-flag-precheck.js';
 import { extractHealthClawCommand } from './command.js';
 

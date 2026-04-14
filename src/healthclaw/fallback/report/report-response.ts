@@ -35,7 +35,8 @@ export function buildReportInterpretationSummary(
   if (facts.missingRequiredFields.length > 0) {
     return {
       reportSummary: 'report text not yet available for safe interpretation',
-      likelyConcern: 'need the exact report wording before giving a safer interpretation',
+      likelyConcern:
+        'need the exact report wording before giving a safer interpretation',
       followUpQuestions: [
         'Can you paste the report impression or the exact abnormal lines?',
       ],
@@ -48,7 +49,8 @@ export function buildReportInterpretationSummary(
   if (safety.disposition === 'emergency_now') {
     return {
       reportSummary: facts.reportText ?? content.trim(),
-      likelyConcern: 'possible critical report finding needing emergency evaluation',
+      likelyConcern:
+        'possible critical report finding needing emergency evaluation',
       followUpQuestions: [
         'What symptoms are happening right now, if any?',
         'Was this report already reviewed by a clinician today?',
@@ -62,7 +64,8 @@ export function buildReportInterpretationSummary(
   if (safety.disposition === 'urgent_care') {
     return {
       reportSummary: facts.reportText ?? content.trim(),
-      likelyConcern: 'possible critical report finding needing urgent clinician review',
+      likelyConcern:
+        'possible critical report finding needing urgent clinician review',
       followUpQuestions: [
         'Has a clinician already contacted you about these results?',
         'When was this report issued?',

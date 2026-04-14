@@ -27,7 +27,10 @@ export const MEDICATION_REFERENCE: MedicationReferenceRecord[] = [
     canonicalName: 'aspirin',
     aliases: ['aspirin'],
     drugClass: 'antiplatelet_nsaid',
-    commonUses: ['pain relief', 'cardiovascular prevention in selected patients'],
+    commonUses: [
+      'pain relief',
+      'cardiovascular prevention in selected patients',
+    ],
     commonPrecautions: [
       'do not combine casually with other blood-thinning medicines',
     ],
@@ -78,7 +81,9 @@ export const MEDICATION_REFERENCE: MedicationReferenceRecord[] = [
     aliases: ['prednisone'],
     drugClass: 'corticosteroid',
     commonUses: ['inflammation control', 'allergic reaction treatment'],
-    commonPrecautions: ['do not change longer courses abruptly without guidance'],
+    commonPrecautions: [
+      'do not change longer courses abruptly without guidance',
+    ],
   },
 ];
 
@@ -118,6 +123,8 @@ export function findMedicationInteractionRules(
   medicationNames: string[],
 ): MedicationInteractionRule[] {
   return MEDICATION_INTERACTION_RULES.filter((rule) =>
-    rule.medications.every((medication) => medicationNames.includes(medication)),
+    rule.medications.every((medication) =>
+      medicationNames.includes(medication),
+    ),
   );
 }

@@ -32,9 +32,7 @@ import {
   buildSymptomFollowUpPlan,
   buildSymptomTriageSummary,
 } from '../fallback/symptom/symptom-response.js';
-import {
-  extractStructuredReportFacts,
-} from '../fallback/report/report-facts.js';
+import { extractStructuredReportFacts } from '../fallback/report/report-facts.js';
 import {
   buildReportFollowUpPlan,
   buildReportInterpretationSummary,
@@ -426,7 +424,9 @@ function shouldContinuePreviousMedicationCase(
   );
 }
 
-function buildLinkedTraceIds(previousTrace: MedicalTrace | undefined): string[] {
+function buildLinkedTraceIds(
+  previousTrace: MedicalTrace | undefined,
+): string[] {
   if (!previousTrace) {
     return [];
   }
@@ -807,7 +807,8 @@ export function handleMedicalMessage(
     templateId: classification.templateId,
     createdAt: now,
     updatedAt: now,
-    status: structuredFacts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
+    status:
+      structuredFacts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
     parentTraceId: continuingPreviousCase ? latestTrace.id : undefined,
     userMessage: input.content,
     classification,

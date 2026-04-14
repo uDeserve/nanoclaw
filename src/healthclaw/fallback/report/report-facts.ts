@@ -1,7 +1,4 @@
-import {
-  ReportTestType,
-  StructuredReportFacts,
-} from '../../types.js';
+import { ReportTestType, StructuredReportFacts } from '../../types.js';
 
 function dedupe(items: string[]): string[] {
   return Array.from(new Set(items));
@@ -88,10 +85,9 @@ function extractNumericValue(
   return match?.[1] ? Number.parseFloat(match[1]) : undefined;
 }
 
-function extractFindings(content: string): Pick<
-  StructuredReportFacts,
-  'abnormalFindings' | 'criticalFindings'
-> {
+function extractFindings(
+  content: string,
+): Pick<StructuredReportFacts, 'abnormalFindings' | 'criticalFindings'> {
   const abnormalFindings: string[] = [];
   const criticalFindings: string[] = [];
   const normalized = content.toLowerCase();

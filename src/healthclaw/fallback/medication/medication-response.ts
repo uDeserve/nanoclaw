@@ -1,7 +1,4 @@
-import {
-  SafetyAssessment,
-  StructuredMedicationFacts,
-} from '../../types.js';
+import { SafetyAssessment, StructuredMedicationFacts } from '../../types.js';
 import { findMedicationReference } from '../../medication/reference.js';
 
 function dedupe(items: string[]): string[] {
@@ -85,10 +82,14 @@ export function buildMedicationConsultSummary(
     followUpQuestions.push('What dose or strength is listed on the package?');
   }
   if (facts.questionType === 'side_effect' && facts.symptoms.length === 0) {
-    followUpQuestions.push('What symptoms happened after taking the medication?');
+    followUpQuestions.push(
+      'What symptoms happened after taking the medication?',
+    );
   }
   if (followUpQuestions.length === 0) {
-    followUpQuestions.push(`What specific question do you have about ${primary}?`);
+    followUpQuestions.push(
+      `What specific question do you have about ${primary}?`,
+    );
   }
 
   const selfCareAdvice = dedupe([

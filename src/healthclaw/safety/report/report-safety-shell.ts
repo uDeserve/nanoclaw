@@ -28,14 +28,18 @@ export function runReportSafetyPrecheck(
       level: 'moderate',
       disposition: 'routine_follow_up',
       redFlags: [],
-      rationale: ['matched report fallback abnormal finding without a critical rule'],
+      rationale: [
+        'matched report fallback abnormal finding without a critical rule',
+      ],
     };
   }
 
   return {
     level: facts.missingRequiredFields.length > 0 ? 'moderate' : 'low',
     disposition:
-      facts.missingRequiredFields.length > 0 ? 'routine_follow_up' : 'self_care',
+      facts.missingRequiredFields.length > 0
+        ? 'routine_follow_up'
+        : 'self_care',
     redFlags: [],
     rationale: [
       'no deterministic report safety shell rule matched in the current precheck',
