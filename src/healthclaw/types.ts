@@ -68,6 +68,23 @@ export interface StructuredMedicationFacts {
   missingRequiredFields: string[];
 }
 
+export interface MedicationReferenceRecord {
+  canonicalName: string;
+  aliases: string[];
+  drugClass: string;
+  commonUses: string[];
+  commonPrecautions: string[];
+  pregnancyCaution?: string;
+  allergyCrossCheckGroup?: string;
+}
+
+export interface MedicationInteractionRule {
+  medications: [string, string];
+  severity: 'moderate' | 'high';
+  label: string;
+  recommendation: string;
+}
+
 export interface SafetyAssessment {
   level: SafetyLevel;
   disposition: SafetyDisposition;

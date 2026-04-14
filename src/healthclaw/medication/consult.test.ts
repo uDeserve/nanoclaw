@@ -34,6 +34,36 @@ describe('HealthClaw medication consult helpers', () => {
     );
   });
 
+  it('flags medication-allergy conflicts deterministically', () => {
+    const content = 'I am allergic to penicillin. Can I take amoxicillin?';
+    const facts = extractStructuredMedicationFacts(content);
+    const safety = runMedicationSafetyPrecheck(content, facts);
+
+    expect(facts.allergyHistory).toContain('penicillin');
+    expect(safety.redFlags).toContain('possible medication-allergy conflict');
+    expect(safety.disposition).toBe('urgent_care');
+  });
+
+  it('flags unsafe missed-dose doubling plans', () => {
+    const content =
+      'I missed a dose of insulin and plan to double the next dose.';
+    const facts = extractStructuredMedicationFacts(content);
+    const safety = runMedicationSafetyPrecheck(content, facts);
+
+    expect(facts.questionType).toBe('missed_dose');
+    expect(safety.redFlags).toContain('unsafe missed-dose recovery plan');
+  });
+
+  it('adds structured medication precautions to lower-risk output', () => {
+    const content = 'What should I watch out for when taking ibuprofen 200 mg tablets?';
+    const facts = extractStructuredMedicationFacts(content);
+    const safety = runMedicationSafetyPrecheck(content, facts);
+    const summary = buildMedicationConsultSummary(content, safety, facts);
+
+    expect(summary.likelyConcern).toContain('nsaid');
+    expect(summary.selfCareAdvice.some((item) => item.includes('blood thinners'))).toBe(true);
+  });
+
   it('builds follow-up prompts when medication details are missing', () => {
     const content = 'Can I take this medicine together with another one?';
     const facts = extractStructuredMedicationFacts(content);

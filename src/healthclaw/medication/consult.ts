@@ -4,24 +4,11 @@ import {
   SafetyAssessment,
   StructuredMedicationFacts,
 } from '../types.js';
-
-const KNOWN_MEDICATIONS: Array<{
-  canonical: string;
-  aliases: string[];
-}> = [
-  {
-    canonical: 'acetaminophen',
-    aliases: ['acetaminophen', 'paracetamol', 'tylenol'],
-  },
-  { canonical: 'ibuprofen', aliases: ['ibuprofen', 'advil', 'motrin'] },
-  { canonical: 'aspirin', aliases: ['aspirin'] },
-  { canonical: 'warfarin', aliases: ['warfarin', 'coumadin'] },
-  { canonical: 'amoxicillin', aliases: ['amoxicillin'] },
-  { canonical: 'metformin', aliases: ['metformin'] },
-  { canonical: 'lisinopril', aliases: ['lisinopril'] },
-  { canonical: 'insulin', aliases: ['insulin'] },
-  { canonical: 'prednisone', aliases: ['prednisone'] },
-];
+import {
+  findMedicationInteractionRules,
+  findMedicationReference,
+  MEDICATION_REFERENCE,
+} from './reference.js';
 
 const SYMPTOM_KEYWORDS = [
   'rash',
@@ -42,14 +29,19 @@ function dedupe(items: string[]): string[] {
 function extractMedicationNames(content: string): string[] {
   const normalized = content.toLowerCase();
   return dedupe(
-    KNOWN_MEDICATIONS.flatMap((entry) => {
+    MEDICATION_REFERENCE.flatMap((entry) => {
       const positions = entry.aliases
         .map((alias) => normalized.indexOf(alias))
         .filter((index) => index >= 0);
       if (positions.length === 0) {
         return [];
       }
-      return [{ canonical: entry.canonical, position: Math.min(...positions) }];
+      return [
+        {
+          canonical: entry.canonicalName,
+          position: Math.min(...positions),
+        },
+      ];
     })
       .sort((a, b) => a.position - b.position)
       .map((item) => item.canonical),
@@ -74,10 +66,7 @@ function extractFormulation(content: string): string | undefined {
   );
   if (!match) return undefined;
   const normalized = match[1].toLowerCase();
-  if (normalized.endsWith('s')) {
-    return normalized.slice(0, -1);
-  }
-  return normalized;
+  return normalized.endsWith('s') ? normalized.slice(0, -1) : normalized;
 }
 
 function extractAge(content: string): number | undefined {
@@ -119,6 +108,7 @@ function classifyQuestionType(
   const normalized = content.toLowerCase();
   if (
     normalized.includes('missed dose') ||
+    normalized.includes('missed a dose') ||
     normalized.includes('forgot a dose') ||
     normalized.includes('missed taking')
   ) {
@@ -147,6 +137,22 @@ function classifyQuestionType(
     return 'interaction_check';
   }
   return 'general_precaution';
+}
+
+function hasRecordedMedicationAllergy(
+  facts: StructuredMedicationFacts,
+): string | undefined {
+  for (const medication of facts.medicationNames) {
+    const reference = findMedicationReference(medication);
+    if (
+      facts.allergyHistory.includes(medication) ||
+      (reference?.allergyCrossCheckGroup &&
+        facts.allergyHistory.includes(reference.allergyCrossCheckGroup))
+    ) {
+      return medication;
+    }
+  }
+  return undefined;
 }
 
 export function extractStructuredMedicationFacts(
@@ -222,28 +228,53 @@ export function runMedicationSafetyPrecheck(
   }
 
   if (
-    facts.medicationNames.includes('warfarin') &&
-    (facts.medicationNames.includes('ibuprofen') ||
-      facts.medicationNames.includes('aspirin'))
+    facts.questionType === 'missed_dose' &&
+    normalized.includes('double') &&
+    normalized.includes('next dose')
   ) {
-    redFlags.push('high-risk anticoagulant and pain-reliever combination');
+    redFlags.push('unsafe missed-dose recovery plan');
+    rationale.push('matched unsafe plan to double the next medication dose');
+  }
+
+  const matchedInteractions = findMedicationInteractionRules(
+    facts.medicationNames,
+  );
+  for (const rule of matchedInteractions) {
+    redFlags.push(rule.label);
+    rationale.push(`matched deterministic interaction rule: ${rule.label}`);
+  }
+
+  const allergyMedication = hasRecordedMedicationAllergy(facts);
+  if (allergyMedication) {
+    redFlags.push('possible medication-allergy conflict');
     rationale.push(
-      'matched deterministic interaction rule: warfarin with ibuprofen or aspirin',
+      `matched medication allergy history against ${allergyMedication}`,
     );
   }
 
-  if (
-    facts.pregnancyStatus === 'pregnant' &&
-    facts.medicationNames.includes('ibuprofen')
-  ) {
-    redFlags.push('pregnancy-related medication caution');
-    rationale.push('matched pregnancy caution rule for ibuprofen use');
+  for (const medication of facts.medicationNames) {
+    const reference = findMedicationReference(medication);
+    if (
+      facts.pregnancyStatus === 'pregnant' &&
+      reference?.pregnancyCaution !== undefined
+    ) {
+      redFlags.push('pregnancy-related medication caution');
+      rationale.push(
+        `matched pregnancy caution rule for ${reference.canonicalName}`,
+      );
+    }
   }
 
   if (redFlags.length > 0) {
+    const highestSeverity =
+      matchedInteractions.some((rule) => rule.severity === 'high') ||
+      redFlags.includes('possible medication overdose') ||
+      redFlags.includes('possible medication-allergy conflict') ||
+      redFlags.includes('unsafe missed-dose recovery plan');
+
     return {
-      level: 'high',
-      disposition: 'urgent_care',
+      level: highestSeverity ? 'high' : 'moderate',
+      disposition: highestSeverity ? 'urgent_care' : 'routine_follow_up',
       redFlags: dedupe(redFlags),
       rationale: dedupe(rationale),
     };
@@ -292,6 +323,10 @@ export function buildMedicationConsultSummary(
   facts: StructuredMedicationFacts = extractStructuredMedicationFacts(content),
 ): MedicationConsultSummary {
   const primary = facts.medicationNames[0] ?? 'the medication';
+  const primaryReference =
+    facts.medicationNames.length > 0
+      ? findMedicationReference(facts.medicationNames[0])
+      : undefined;
 
   if (safety.disposition === 'emergency_now') {
     return {
@@ -315,6 +350,7 @@ export function buildMedicationConsultSummary(
       ],
       selfCareAdvice: [
         'Avoid taking extra doses until the medication question is clarified.',
+        ...(primaryReference?.commonPrecautions ?? []).slice(0, 1),
       ],
     };
   }
@@ -338,16 +374,21 @@ export function buildMedicationConsultSummary(
     followUpQuestions.push(`What specific question do you have about ${primary}?`);
   }
 
+  const selfCareAdvice = dedupe([
+    'Use the medication only as labeled until the question is clarified.',
+    'Seek pharmacist or clinician support sooner if new warning signs appear.',
+    ...(primaryReference?.commonPrecautions ?? []).slice(0, 2),
+  ]);
+
   return {
     medicationSummary: content.trim(),
     likelyConcern:
       facts.missingRequiredFields.length > 0
         ? 'medication question requiring a bit more detail before safe guidance'
-        : 'lower-acuity medication information request with no current deterministic red flags',
+        : primaryReference
+          ? `lower-acuity ${primaryReference.drugClass} question with no current deterministic red flags`
+          : 'lower-acuity medication information request with no current deterministic red flags',
     followUpQuestions,
-    selfCareAdvice: [
-      'Use the medication only as labeled until the question is clarified.',
-      'Seek pharmacist or clinician support sooner if new warning signs appear.',
-    ],
+    selfCareAdvice,
   };
 }

@@ -11,6 +11,10 @@ import {
   extractStructuredMedicationFacts,
   runMedicationSafetyPrecheck,
 } from '../medication/consult.js';
+import {
+  findMedicationInteractionRules,
+  findMedicationReference,
+} from '../medication/reference.js';
 import { classifyMedicalTemplate } from '../templates/registry.js';
 import {
   buildSymptomTriageSummary,
@@ -99,6 +103,43 @@ function formatMedicationFacts(facts: StructuredMedicationFacts): string[] {
   if (facts.missingRequiredFields.length > 0) {
     extractedFacts.push(
       `missing_required_fields=${facts.missingRequiredFields.join(',')}`,
+    );
+  }
+
+  return extractedFacts;
+}
+
+function formatMedicationReferenceFacts(
+  facts: StructuredMedicationFacts,
+): string[] {
+  const extractedFacts: string[] = [];
+
+  for (const medication of facts.medicationNames) {
+    const reference = findMedicationReference(medication);
+    if (!reference) {
+      continue;
+    }
+    extractedFacts.push(
+      `medication_reference=${reference.canonicalName}:${reference.drugClass}`,
+    );
+    for (const use of reference.commonUses) {
+      extractedFacts.push(`common_use=${reference.canonicalName}:${use}`);
+    }
+    for (const precaution of reference.commonPrecautions) {
+      extractedFacts.push(
+        `common_precaution=${reference.canonicalName}:${precaution}`,
+      );
+    }
+    if (reference.pregnancyCaution) {
+      extractedFacts.push(
+        `pregnancy_caution=${reference.canonicalName}:${reference.pregnancyCaution}`,
+      );
+    }
+  }
+
+  for (const rule of findMedicationInteractionRules(facts.medicationNames)) {
+    extractedFacts.push(
+      `interaction_rule=${rule.medications.join('+')}:${rule.label}`,
     );
   }
 
@@ -241,6 +282,7 @@ function buildMedicationExpertView(
     templateId: classification.templateId,
     extractedFacts: [
       ...formatMedicationFacts(facts),
+      ...formatMedicationReferenceFacts(facts),
       `raw_user_message=${input.content}`,
       `group_folder=${input.groupFolder}`,
       `chat_jid=${input.chatJid}`,

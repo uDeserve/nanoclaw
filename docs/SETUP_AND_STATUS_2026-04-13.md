@@ -556,3 +556,60 @@ Observed full test result at this milestone:
 
 - 25 test files passed
 - 278 tests passed
+
+## HealthClaw Medication Reference Hardening Milestone
+
+The medication consult path now has a small structured local medication
+reference layer instead of relying only on direct keyword rules inside one
+helper file.
+
+### What changed
+
+Added a local medication reference module under:
+
+- `src/healthclaw/medication/reference.ts`
+
+The medication path now uses:
+
+- structured medication reference records
+- structured deterministic interaction rules
+- medication-class-aware output hints
+- reference-driven precautions in patient-facing output
+- reference-derived extracted facts in expert-facing output and trace
+
+### Safety and reasoning improvements
+
+The deterministic medication path now additionally covers:
+
+- medication-allergy conflict detection
+  - for example: penicillin allergy versus amoxicillin
+- unsafe missed-dose recovery logic
+  - for example: doubling the next insulin dose
+- broader interaction handling through structured local interaction rules
+- pregnancy caution handling through medication reference metadata
+
+### Output improvements
+
+Patient-facing medication outputs can now include:
+
+- medication-class-aware concern language
+- medication-specific precautions from the local reference layer
+
+Expert-facing outputs and traces now include:
+
+- medication reference facts
+- interaction rule facts
+- richer structured rationale for medication decisions
+
+### Verification after this milestone
+
+Validated successfully on the server after the medication reference hardening
+changes:
+
+- `npm run build`
+- `npm test`
+
+Observed full test result at this milestone:
+
+- 25 test files passed
+- 282 tests passed

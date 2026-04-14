@@ -115,6 +115,9 @@ describe('HealthClaw runtime handler', () => {
     expect(result.expertView.safetyAssessment.redFlags).toContain(
       'high-risk anticoagulant and pain-reliever combination',
     );
+    expect(result.expertView.extractedFacts.some((fact) =>
+      fact.includes('interaction_rule=warfarin+ibuprofen'),
+    )).toBe(true);
   });
 
   it('keeps medication consult traces in draft when drug details are missing', () => {
@@ -130,5 +133,23 @@ describe('HealthClaw runtime handler', () => {
     expect(result.patientView.nextStepFocus).toContain(
       'clarify the exact medication name',
     );
+  });
+
+  it('surfaces medication allergy conflicts in patient and expert outputs', () => {
+    const result = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'I am allergic to penicillin. Can I take amoxicillin?',
+    });
+
+    expect(result.trace.templateId).toBe('medication_consult');
+    expect(result.patientView.safetyWarnings).toContain(
+      'possible medication-allergy conflict',
+    );
+    expect(
+      result.expertView.extractedFacts.some((fact) =>
+        fact.includes('medication_reference=amoxicillin:penicillin_antibiotic'),
+      ),
+    ).toBe(true);
   });
 });
