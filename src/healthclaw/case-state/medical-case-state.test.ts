@@ -4,7 +4,7 @@ import {
   buildMedicationCaseState,
   buildReportCaseState,
   buildSymptomCaseState,
-} from './case-state.js';
+} from './medical-case-state.js';
 
 describe('HealthClaw case state builders', () => {
   it('builds a symptom case state from structured symptom facts', () => {

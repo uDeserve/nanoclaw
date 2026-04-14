@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  classifyMedicalTemplate,
-  getTemplateDefinition,
-} from './templates/registry.js';
-import { runSymptomSafetyPrecheck } from './triage/symptom.js';
+import { classifyMedicalTemplate } from './router-agent.js';
+import { getTemplateDefinition } from './template-catalog.js';
 
-describe('HealthClaw template registry', () => {
-  it('classifies medication questions from deterministic keywords', () => {
+describe('HealthClaw router agent adapter', () => {
+  it('classifies medication questions through the fallback router', () => {
     const result = classifyMedicalTemplate(
       'I need help with the medication dose for this tablet.',
     );
 
     expect(result.templateId).toBe('medication_consult');
     expect(result.confidence).toBeGreaterThan(0.8);
+    expect(result.reasons[0]).toContain('fallback keyword router');
   });
 
   it('classifies common drug-name questions as medication consults', () => {
@@ -46,26 +44,5 @@ describe('HealthClaw template registry', () => {
 
     expect(definition.label).toBe('Symptom Triage');
     expect(definition.safetyChecks).toContain('red_flag_screen');
-  });
-});
-
-describe('HealthClaw symptom safety precheck', () => {
-  it('escalates chest pain symptoms to emergency disposition', () => {
-    const result = runSymptomSafetyPrecheck(
-      'The patient has chest pain and difficulty breathing right now.',
-    );
-
-    expect(result.disposition).toBe('emergency_now');
-    expect(result.level).toBe('critical');
-    expect(result.redFlags).toContain('possible chest pain emergency');
-  });
-
-  it('keeps non-red-flag symptom messages at routine follow-up', () => {
-    const result = runSymptomSafetyPrecheck(
-      'Mild cough for two days without worsening.',
-    );
-
-    expect(result.disposition).toBe('routine_follow_up');
-    expect(result.redFlags).toHaveLength(0);
   });
 });

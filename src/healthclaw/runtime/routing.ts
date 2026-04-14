@@ -1,9 +1,9 @@
 import { NewMessage } from '../../types.js';
-import { classifyMedicalTemplate } from '../templates/registry.js';
+import { classifyMedicalTemplate } from '../agents/router/router-agent.js';
 import {
   extractStructuredSymptomFacts,
-  runSymptomSafetyPrecheck,
-} from '../triage/symptom.js';
+} from '../fallback/symptom/symptom-facts.js';
+import { runSymptomSafetyPrecheck } from '../safety/symptom/red-flag-precheck.js';
 import { extractHealthClawCommand } from './command.js';
 
 export interface HealthClawRouteDecision {

@@ -55,6 +55,11 @@ Read these in order:
    - practical implementation handoff
    - current code reality and next recommended engineering direction
 
+5. `docs/HEALTHCLAW_RULE_RUNTIME_MIGRATION.md`
+   - rule-code reorganization policy
+   - where safety, fallback, and future legacy code now belong
+   - import-boundary constraints for the runtime
+
 ## Historical / Secondary Documents
 
 These documents are still useful as background reference, but they should not
@@ -103,12 +108,12 @@ Main HealthClaw code lives under:
 Important files:
 
 - `src/healthclaw/types.ts`
-- `src/healthclaw/runtime/case-state.ts`
+- `src/healthclaw/case-state/medical-case-state.ts`
 - `src/healthclaw/runtime/handle-medical-message.ts`
 - `src/healthclaw/runtime/command.ts`
-- `src/healthclaw/triage/symptom.ts`
-- `src/healthclaw/medication/consult.ts`
-- `src/healthclaw/report/interpret.ts`
+- `src/healthclaw/agents/router/router-agent.ts`
+- `src/healthclaw/fallback/`
+- `src/healthclaw/safety/`
 - `src/db.ts`
 - `src/index.ts`
 

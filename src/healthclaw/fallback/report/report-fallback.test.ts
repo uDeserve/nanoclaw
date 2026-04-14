@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { extractStructuredReportFacts } from './report-facts.js';
 import {
   buildReportFollowUpPlan,
   buildReportInterpretationSummary,
-  extractStructuredReportFacts,
-  runReportSafetyPrecheck,
-} from './interpret.js';
+} from './report-response.js';
+import { runReportSafetyPrecheck } from '../../safety/report/report-safety-shell.js';
 
-describe('HealthClaw report interpretation helpers', () => {
+describe('HealthClaw report fallback helpers', () => {
   it('extracts abnormal findings from basic lab report text', () => {
     const facts = extractStructuredReportFacts(
       'CBC report: hemoglobin 8.2, WBC 14.5, platelets 210.',

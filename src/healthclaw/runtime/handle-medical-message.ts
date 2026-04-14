@@ -9,32 +9,38 @@ import {
   buildMedicationCaseState,
   buildReportCaseState,
   buildSymptomCaseState,
-} from './case-state.js';
+} from '../case-state/medical-case-state.js';
+import {
+  extractStructuredMedicationFacts,
+  mergeStructuredMedicationFacts,
+} from '../fallback/medication/medication-facts.js';
 import {
   buildMedicationConsultSummary,
   buildMedicationFollowUpPlan,
-  extractStructuredMedicationFacts,
-  mergeStructuredMedicationFacts,
-  runMedicationSafetyPrecheck,
-} from '../medication/consult.js';
+} from '../fallback/medication/medication-response.js';
 import {
   findMedicationInteractionRules,
   findMedicationReference,
 } from '../medication/reference.js';
-import { classifyMedicalTemplate } from '../templates/registry.js';
+import { runMedicationSafetyPrecheck } from '../safety/medication/medication-safety-shell.js';
+import { classifyMedicalTemplate } from '../agents/router/router-agent.js';
 import {
-  buildSymptomTriageSummary,
-  buildSymptomFollowUpPlan,
   extractStructuredSymptomFacts,
   mergeStructuredSymptomFacts,
-  runSymptomSafetyPrecheck,
-} from '../triage/symptom.js';
+} from '../fallback/symptom/symptom-facts.js';
+import {
+  buildSymptomFollowUpPlan,
+  buildSymptomTriageSummary,
+} from '../fallback/symptom/symptom-response.js';
+import {
+  extractStructuredReportFacts,
+} from '../fallback/report/report-facts.js';
 import {
   buildReportFollowUpPlan,
   buildReportInterpretationSummary,
-  extractStructuredReportFacts,
-  runReportSafetyPrecheck,
-} from '../report/interpret.js';
+} from '../fallback/report/report-response.js';
+import { runSymptomSafetyPrecheck } from '../safety/symptom/red-flag-precheck.js';
+import { runReportSafetyPrecheck } from '../safety/report/report-safety-shell.js';
 import {
   ExpertViewOutput,
   MedicalRuntimeInput,

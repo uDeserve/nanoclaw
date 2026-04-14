@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  buildMedicationConsultSummary,
-  buildMedicationFollowUpPlan,
   extractStructuredMedicationFacts,
   mergeStructuredMedicationFacts,
-  runMedicationSafetyPrecheck,
-} from './consult.js';
+} from './medication-facts.js';
+import {
+  buildMedicationConsultSummary,
+  buildMedicationFollowUpPlan,
+} from './medication-response.js';
+import { runMedicationSafetyPrecheck } from '../../safety/medication/medication-safety-shell.js';
 
-describe('HealthClaw medication consult helpers', () => {
+describe('HealthClaw medication fallback helpers', () => {
   it('extracts medication facts and interaction intent', () => {
     const facts = extractStructuredMedicationFacts(
       'Can I take warfarin with ibuprofen 200 mg tablets?',
@@ -20,7 +22,7 @@ describe('HealthClaw medication consult helpers', () => {
     expect(facts.formulation).toBe('tablet');
   });
 
-  it('flags high-risk medication combinations deterministically', () => {
+  it('flags high-risk medication combinations through the safety shell', () => {
     const facts = extractStructuredMedicationFacts(
       'Can I take warfarin with ibuprofen?',
     );
@@ -35,7 +37,7 @@ describe('HealthClaw medication consult helpers', () => {
     );
   });
 
-  it('flags medication-allergy conflicts deterministically', () => {
+  it('flags medication-allergy conflicts through the safety shell', () => {
     const content = 'I am allergic to penicillin. Can I take amoxicillin?';
     const facts = extractStructuredMedicationFacts(content);
     const safety = runMedicationSafetyPrecheck(content, facts);
@@ -56,13 +58,16 @@ describe('HealthClaw medication consult helpers', () => {
   });
 
   it('adds structured medication precautions to lower-risk output', () => {
-    const content = 'What should I watch out for when taking ibuprofen 200 mg tablets?';
+    const content =
+      'What should I watch out for when taking ibuprofen 200 mg tablets?';
     const facts = extractStructuredMedicationFacts(content);
     const safety = runMedicationSafetyPrecheck(content, facts);
     const summary = buildMedicationConsultSummary(content, safety, facts);
 
     expect(summary.likelyConcern).toContain('nsaid');
-    expect(summary.selfCareAdvice.some((item) => item.includes('blood thinners'))).toBe(true);
+    expect(
+      summary.selfCareAdvice.some((item) => item.includes('blood thinners')),
+    ).toBe(true);
   });
 
   it('builds follow-up prompts when medication details are missing', () => {
@@ -81,7 +86,9 @@ describe('HealthClaw medication consult helpers', () => {
     const first = extractStructuredMedicationFacts(
       'Can I take warfarin with another medicine?',
     );
-    const second = extractStructuredMedicationFacts('It is ibuprofen 200 mg tablets.');
+    const second = extractStructuredMedicationFacts(
+      'It is ibuprofen 200 mg tablets.',
+    );
     const merged = mergeStructuredMedicationFacts(first, second);
 
     expect(merged.medicationNames).toEqual(['warfarin', 'ibuprofen']);

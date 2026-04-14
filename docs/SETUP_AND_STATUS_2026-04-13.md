@@ -800,3 +800,75 @@ Observed full test result at this milestone:
 
 - 27 test files passed
 - 293 tests passed
+
+## HealthClaw Rule Runtime Reorganization Milestone
+
+HealthClaw rule-heavy code has now been reorganized so the directory structure
+matches the intended architecture more closely.
+
+### What changed
+
+The previous monolithic rule modules were split into:
+
+- `src/healthclaw/agents/`
+  - current router entrypoint
+- `src/healthclaw/fallback/`
+  - temporary keyword-routing, extraction, and formatter fallbacks
+- `src/healthclaw/safety/`
+  - deterministic safety shell only
+- `src/healthclaw/case-state/`
+  - shared `medical_case_state` builders
+- `src/healthclaw/legacy/`
+  - reserved for code that exits the main runtime path
+
+Specific moves:
+
+- old `templates/registry.ts` replaced by:
+  - `agents/router/template-catalog.ts`
+  - `agents/router/router-agent.ts`
+  - `fallback/task-classifier/keyword-router.ts`
+- old `triage/symptom.ts` replaced by:
+  - `fallback/symptom/`
+  - `safety/symptom/red-flag-precheck.ts`
+- old `medication/consult.ts` replaced by:
+  - `fallback/medication/`
+  - `safety/medication/medication-safety-shell.ts`
+- old `report/interpret.ts` replaced by:
+  - `fallback/report/`
+  - `safety/report/report-safety-shell.ts`
+- old `runtime/case-state.ts` replaced by:
+  - `case-state/medical-case-state.ts`
+
+### Runtime constraint added
+
+The runtime now imports from the new directories rather than the previous
+rule-heavy paths.
+
+An architecture test was added to enforce:
+
+- `runtime/handle-medical-message.ts` does not import the old rule modules
+- `runtime/` and `agents/` do not import from `legacy/`
+
+### Why this matters
+
+This milestone does not yet make HealthClaw agent-first, but it does stop
+presenting fallback logic as the main architecture.
+
+That gives the next implementation phase a cleaner base for:
+
+- router agent replacement
+- specialist-agent insertion
+- fallback-only degradation semantics
+- narrower and auditable safety-shell evolution
+
+### Verification after this milestone
+
+Validated successfully in the local workspace after the reorganization:
+
+- `npm run build`
+- `npm test`
+
+Observed full test result at this milestone:
+
+- 25 test files passed
+- 277 tests passed
