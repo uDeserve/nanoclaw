@@ -65,6 +65,15 @@ symptom-triage and first medication-consult milestones:
    - what the team should implement next
    - near-term ordering and acceptance criteria
 
+6. `docs/HEALTHCLAW_HOME_HEALTH_STORY.md`
+   - why HealthClaw should be framed as a home robot / home agent health module
+   - why proactive household follow-up is the stronger product story
+
+7. `docs/HEALTHCLAW_EVENT_DRIVEN_RUNTIME_PLAN.md`
+   - event-driven runtime refactor
+   - heartbeat, cron, and external-trigger design
+   - how to simulate embodied sensing before hardware exists
+
 ## Product / Concept Documents To Understand Intent
 
 These project-level concept docs live outside this repo in the broader
