@@ -3,6 +3,7 @@ import {
   MedicalTaskTemplateId,
   SafetyAssessment,
   StructuredMedicationFacts,
+  StructuredReportFacts,
   StructuredSymptomFacts,
 } from '../types.js';
 
@@ -68,6 +69,30 @@ export function buildMedicationCaseState(
       allergyHistory: facts.allergyHistory,
       otherMedications: facts.otherMedications,
       symptoms: facts.symptoms,
+    }),
+    missingFields: facts.missingRequiredFields,
+    riskLevel: safety.level,
+    disposition: safety.disposition,
+    currentFollowUpFocus: followUpPlan,
+    linkedTraceIds,
+    caseStatus: facts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
+  };
+}
+
+export function buildReportCaseState(
+  facts: StructuredReportFacts,
+  safety: SafetyAssessment,
+  followUpPlan: string[],
+  linkedTraceIds: string[],
+): MedicalCaseState {
+  return {
+    taskType: 'report_interpretation',
+    knownStructuredFacts: compactStructuredFacts({
+      reportText: facts.reportText,
+      testType: facts.testType,
+      abnormalFindings: facts.abnormalFindings,
+      criticalFindings: facts.criticalFindings,
+      impressionText: facts.impressionText,
     }),
     missingFields: facts.missingRequiredFields,
     riskLevel: safety.level,

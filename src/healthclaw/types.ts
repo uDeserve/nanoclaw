@@ -20,6 +20,15 @@ export type MedicationQuestionType =
   | 'side_effect'
   | 'general_precaution';
 export type PregnancyStatus = 'pregnant' | 'not_pregnant' | 'unknown';
+export type ReportTestType =
+  | 'cbc'
+  | 'bmp'
+  | 'cmp'
+  | 'troponin'
+  | 'urinalysis'
+  | 'radiology_report'
+  | 'general_lab'
+  | 'unknown';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -68,6 +77,15 @@ export interface StructuredMedicationFacts {
   missingRequiredFields: string[];
 }
 
+export interface StructuredReportFacts {
+  reportText?: string;
+  testType?: ReportTestType;
+  abnormalFindings: string[];
+  criticalFindings: string[];
+  impressionText?: string;
+  missingRequiredFields: string[];
+}
+
 export interface MedicationReferenceRecord {
   canonicalName: string;
   aliases: string[];
@@ -100,6 +118,13 @@ export interface SymptomTriageSummary {
   structuredFacts: StructuredSymptomFacts;
 }
 
+export interface ReportInterpretationSummary {
+  reportSummary: string;
+  likelyConcern: string;
+  followUpQuestions: string[];
+  selfCareAdvice: string[];
+}
+
 export interface PatientViewOutput {
   templateLabel?: string;
   summary: string;
@@ -116,6 +141,7 @@ export interface ExpertViewOutput {
   extractedFacts: string[];
   structuredSymptomFacts?: StructuredSymptomFacts;
   structuredMedicationFacts?: StructuredMedicationFacts;
+  structuredReportFacts?: StructuredReportFacts;
   safetyAssessment: SafetyAssessment;
   routingReason: string[];
   followUpPlan: string[];

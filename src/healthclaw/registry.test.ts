@@ -32,6 +32,15 @@ describe('HealthClaw template registry', () => {
     expect(result.templateId).toBe('symptom_triage');
   });
 
+  it('classifies report questions from deterministic report keywords', () => {
+    const result = classifyMedicalTemplate(
+      'Please explain this CBC report result for me.',
+    );
+
+    expect(result.templateId).toBe('report_interpretation');
+    expect(result.confidence).toBeGreaterThan(0.8);
+  });
+
   it('returns the template definition for symptom triage', () => {
     const definition = getTemplateDefinition('symptom_triage');
 

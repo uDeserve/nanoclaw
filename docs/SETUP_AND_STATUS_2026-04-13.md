@@ -729,3 +729,74 @@ Observed full test result at this milestone:
 
 - 26 test files passed
 - 286 tests passed
+
+## HealthClaw Report Interpretation First Path Milestone
+
+HealthClaw now has the first conservative host-side `report_interpretation`
+path.
+
+### What changed
+
+Added a dedicated report helper module under:
+
+- `src/healthclaw/report/interpret.ts`
+- `src/healthclaw/report/interpret.test.ts`
+
+The runtime can now:
+
+- classify common report/lab-result requests into `report_interpretation`
+- extract structured report facts from pasted report text
+- identify a small deterministic set of abnormal and critical lab findings
+- produce patient-facing and expert-facing report outputs
+- persist report traces using the same case-state and trace-event structure as
+  the symptom and medication paths
+
+### Current deterministic report coverage
+
+The initial rule set is intentionally narrow and host-side:
+
+- CBC-like findings such as low hemoglobin and elevated white blood cells
+- chemistry-style findings such as potassium, sodium, creatinine, and glucose
+- troponin critical-value escalation
+- explicit `critical value` / `panic value` wording
+
+This is not yet a broad medical-report interpreter. It is the first safe
+runtime path for structured report text.
+
+### Safety behavior
+
+The current report path now supports:
+
+- `draft` state when the user has not yet pasted the actual report wording
+- `routine_follow_up` for non-critical abnormalities
+- `urgent_care` for deterministic critical report findings
+- `emergency_now` for critical cardiac-lab style signals such as elevated
+  troponin
+
+### Why this matters
+
+This milestone establishes the third concrete HealthClaw task path while
+preserving the same runtime shape:
+
+- deterministic extraction
+- deterministic safety precheck
+- patient view
+- expert view
+- shared `medical_case_state`
+- persisted trace and trace events
+
+That consistency is important for the longer-term paper direction because it
+makes new medical task paths comparable instead of ad hoc.
+
+### Verification after this milestone
+
+Validated successfully on the server after the first report interpretation
+path changes:
+
+- `npm run build`
+- `npm test`
+
+Observed full test result at this milestone:
+
+- 27 test files passed
+- 293 tests passed

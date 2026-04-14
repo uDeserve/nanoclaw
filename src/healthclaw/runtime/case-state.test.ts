@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildMedicationCaseState,
+  buildReportCaseState,
   buildSymptomCaseState,
 } from './case-state.js';
 
@@ -58,5 +59,32 @@ describe('HealthClaw case state builders', () => {
     ]);
     expect(state.riskLevel).toBe('high');
     expect(state.currentFollowUpFocus).toEqual(['clarify clinician intent']);
+  });
+
+  it('builds a report case state from structured report facts', () => {
+    const state = buildReportCaseState(
+      {
+        reportText: 'CBC report: hemoglobin 8.2, WBC 14.5.',
+        testType: 'cbc',
+        abnormalFindings: ['low hemoglobin (8.2)'],
+        criticalFindings: [],
+        missingRequiredFields: [],
+      },
+      {
+        level: 'moderate',
+        disposition: 'routine_follow_up',
+        redFlags: [],
+        rationale: ['matched abnormal lab finding'],
+      },
+      ['clarify the clinical question'],
+      [],
+    );
+
+    expect(state.taskType).toBe('report_interpretation');
+    expect(state.knownStructuredFacts.testType).toBe('cbc');
+    expect(state.knownStructuredFacts.abnormalFindings).toEqual([
+      'low hemoglobin (8.2)',
+    ]);
+    expect(state.caseStatus).toBe('completed');
   });
 });

@@ -190,4 +190,37 @@ describe('HealthClaw runtime handler', () => {
       ),
     ).toBe(true);
   });
+
+  it('creates a report interpretation trace with abnormal lab findings', () => {
+    const result = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'CBC report: hemoglobin 8.2, WBC 14.5, impression: anemia workup needed.',
+    });
+
+    expect(result.trace.templateId).toBe('report_interpretation');
+    expect(result.trace.status).toBe('completed');
+    expect(result.patientView.templateLabel).toBe('Report Interpretation');
+    expect(result.trace.caseState.taskType).toBe('report_interpretation');
+    expect(result.expertView.structuredReportFacts?.testType).toBe('cbc');
+    expect(result.expertView.structuredReportFacts?.abnormalFindings).toContain(
+      'low hemoglobin (8.2)',
+    );
+    expect(result.expertView.extractedFacts).toContain('test_type=cbc');
+  });
+
+  it('keeps report interpretation in draft when report text is still missing', () => {
+    const result = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'Can you explain my report?',
+    });
+
+    expect(result.trace.templateId).toBe('report_interpretation');
+    expect(result.trace.status).toBe('draft');
+    expect(result.patientView.missingInformation).toContain('report_text');
+    expect(result.patientView.nextStepFocus).toContain(
+      'paste the key report lines or impression text',
+    );
+  });
 });

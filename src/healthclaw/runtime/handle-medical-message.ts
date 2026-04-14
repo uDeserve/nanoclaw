@@ -7,6 +7,7 @@ import {
 } from '../../db.js';
 import {
   buildMedicationCaseState,
+  buildReportCaseState,
   buildSymptomCaseState,
 } from './case-state.js';
 import {
@@ -29,12 +30,19 @@ import {
   runSymptomSafetyPrecheck,
 } from '../triage/symptom.js';
 import {
+  buildReportFollowUpPlan,
+  buildReportInterpretationSummary,
+  extractStructuredReportFacts,
+  runReportSafetyPrecheck,
+} from '../report/interpret.js';
+import {
   ExpertViewOutput,
   MedicalRuntimeInput,
   MedicalRuntimeResult,
   MedicalTrace,
   PatientViewOutput,
   StructuredMedicationFacts,
+  StructuredReportFacts,
   StructuredSymptomFacts,
 } from '../types.js';
 
@@ -145,6 +153,33 @@ function formatMedicationReferenceFacts(
   for (const rule of findMedicationInteractionRules(facts.medicationNames)) {
     extractedFacts.push(
       `interaction_rule=${rule.medications.join('+')}:${rule.label}`,
+    );
+  }
+
+  return extractedFacts;
+}
+
+function formatReportFacts(facts: StructuredReportFacts): string[] {
+  const extractedFacts: string[] = [];
+
+  if (facts.testType) {
+    extractedFacts.push(`test_type=${facts.testType}`);
+  }
+  if (facts.reportText) {
+    extractedFacts.push(`report_text=${facts.reportText}`);
+  }
+  if (facts.impressionText) {
+    extractedFacts.push(`impression_text=${facts.impressionText}`);
+  }
+  for (const finding of facts.abnormalFindings) {
+    extractedFacts.push(`abnormal_finding=${finding}`);
+  }
+  for (const finding of facts.criticalFindings) {
+    extractedFacts.push(`critical_finding=${finding}`);
+  }
+  if (facts.missingRequiredFields.length > 0) {
+    extractedFacts.push(
+      `missing_required_fields=${facts.missingRequiredFields.join(',')}`,
     );
   }
 
@@ -296,6 +331,65 @@ function buildMedicationExpertView(
       ...(parentTraceId ? [`parent_trace_id=${parentTraceId}`] : []),
     ],
     structuredMedicationFacts: facts,
+    safetyAssessment,
+    routingReason: classification.reasons,
+    followUpPlan,
+  };
+}
+
+function buildReportPatientView(
+  summary: ReturnType<typeof buildReportInterpretationSummary>,
+  safetyAssessment: ReturnType<typeof runReportSafetyPrecheck>,
+  facts: StructuredReportFacts,
+  followUpPlan: string[],
+): PatientViewOutput {
+  let recommendedAction: string;
+  if (safetyAssessment.disposition === 'emergency_now') {
+    recommendedAction =
+      'Seek emergency evaluation now if this report is new or if symptoms are happening right now.';
+  } else if (safetyAssessment.disposition === 'urgent_care') {
+    recommendedAction =
+      'Arrange urgent clinician review of this report rather than relying on text-only interpretation.';
+  } else if (facts.missingRequiredFields.length > 0) {
+    recommendedAction =
+      'Paste the exact report wording first so the interpretation can be made more safely.';
+  } else {
+    recommendedAction =
+      'Use this as a structured explanation aid and confirm next steps with the clinician who ordered the test.';
+  }
+
+  const summaryPrefix = facts.testType
+    ? `Report interpretation (${facts.testType})`
+    : 'Report interpretation';
+
+  return {
+    templateLabel: 'Report Interpretation',
+    summary: `${summaryPrefix}: ${summary.likelyConcern}`,
+    recommendedAction,
+    nextStepFocus: followUpPlan,
+    followUpQuestions: summary.followUpQuestions,
+    selfCareAdvice: summary.selfCareAdvice,
+    safetyWarnings: safetyAssessment.redFlags,
+    missingInformation: facts.missingRequiredFields,
+  };
+}
+
+function buildReportExpertView(
+  input: MedicalRuntimeInput,
+  classification: ReturnType<typeof classifyMedicalTemplate>,
+  safetyAssessment: ReturnType<typeof runReportSafetyPrecheck>,
+  facts: StructuredReportFacts,
+  followUpPlan: string[],
+): ExpertViewOutput {
+  return {
+    templateId: classification.templateId,
+    extractedFacts: [
+      ...formatReportFacts(facts),
+      `raw_user_message=${input.content}`,
+      `group_folder=${input.groupFolder}`,
+      `chat_jid=${input.chatJid}`,
+    ],
+    structuredReportFacts: facts,
     safetyAssessment,
     routingReason: classification.reasons,
     followUpPlan,
@@ -469,6 +563,130 @@ export function handleMedicalMessage(
               },
             ]
           : []),
+        {
+          type: 'safety_precheck_completed',
+          createdAt: now,
+          payload: {
+            level: safetyAssessment.level,
+            disposition: safetyAssessment.disposition,
+            redFlags: safetyAssessment.redFlags,
+          },
+        },
+        {
+          type: 'follow_up_plan_created',
+          createdAt: now,
+          payload: {
+            followUpPlan,
+            followUpQuestions: patientView.followUpQuestions,
+          },
+        },
+        {
+          type: 'case_state_updated',
+          createdAt: now,
+          payload: caseState,
+        },
+        {
+          type: 'patient_output_created',
+          createdAt: now,
+          payload: {
+            recommendedAction: patientView.recommendedAction,
+            missingInformation: patientView.missingInformation,
+            nextStepFocus: patientView.nextStepFocus,
+          },
+        },
+        {
+          type: 'expert_output_created',
+          createdAt: now,
+          payload: {
+            extractedFacts: expertView.extractedFacts,
+          },
+        },
+      ],
+    };
+
+    persistTrace(trace);
+    return {
+      patientView,
+      expertView,
+      trace,
+    };
+  }
+
+  if (classification.templateId === 'report_interpretation') {
+    const facts = extractStructuredReportFacts(input.content);
+    const safetyAssessment = runReportSafetyPrecheck(input.content, facts);
+    const reportSummary = buildReportInterpretationSummary(
+      input.content,
+      safetyAssessment,
+      facts,
+    );
+    const followUpPlan = buildReportFollowUpPlan(facts);
+    const patientView = buildReportPatientView(
+      reportSummary,
+      safetyAssessment,
+      facts,
+      followUpPlan,
+    );
+    const expertView = buildReportExpertView(
+      input,
+      classification,
+      safetyAssessment,
+      facts,
+      followUpPlan,
+    );
+    const caseState = buildReportCaseState(
+      facts,
+      safetyAssessment,
+      followUpPlan,
+      [],
+    );
+
+    const trace: MedicalTrace = {
+      id: randomUUID(),
+      chatJid: input.chatJid,
+      groupFolder: input.groupFolder,
+      templateId: classification.templateId,
+      createdAt: now,
+      updatedAt: now,
+      status: facts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
+      userMessage: input.content,
+      classification,
+      safetyAssessment,
+      caseState,
+      patientView,
+      expertView,
+      evidence: [
+        { kind: 'user_statement', detail: input.content },
+        ...formatReportFacts(facts).map((fact) => ({
+          kind: 'extracted_fact' as const,
+          detail: fact,
+        })),
+        ...classification.reasons.map((reason) => ({
+          kind: 'rule' as const,
+          detail: reason,
+        })),
+        ...safetyAssessment.rationale.map((reason) => ({
+          kind: 'rule' as const,
+          detail: reason,
+        })),
+      ],
+      events: [
+        {
+          type: 'template_classified',
+          createdAt: now,
+          payload: {
+            templateId: classification.templateId,
+            confidence: classification.confidence,
+            reasons: classification.reasons,
+          },
+        },
+        {
+          type: 'structured_facts_extracted',
+          createdAt: now,
+          payload: {
+            ...facts,
+          },
+        },
         {
           type: 'safety_precheck_completed',
           createdAt: now,
