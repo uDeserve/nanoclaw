@@ -613,3 +613,119 @@ Observed full test result at this milestone:
 
 - 25 test files passed
 - 282 tests passed
+
+## HealthClaw Shared Case State Milestone
+
+The runtime now includes a shared `medical_case_state` abstraction that is used
+by both symptom and medication paths.
+
+### What changed
+
+Added a shared runtime helper module under:
+
+- `src/healthclaw/runtime/case-state.ts`
+- `src/healthclaw/runtime/case-state.test.ts`
+
+The runtime now builds a unified case-state object for:
+
+- `symptom_triage`
+- `medication_consult`
+
+### Current case-state fields
+
+The current shared case state includes:
+
+- `taskType`
+- `knownStructuredFacts`
+- `missingFields`
+- `riskLevel`
+- `disposition`
+- `currentFollowUpFocus`
+- `linkedTraceIds`
+- `caseStatus`
+
+### Runtime integration
+
+The host-side runtime now:
+
+- builds case state before trace persistence
+- stores case state inside `MedicalTrace`
+- records a `case_state_updated` trace event
+
+This gives HealthClaw a stable shared representation layer between structured
+fact extraction and future multi-turn planner behavior.
+
+### Why this matters
+
+This milestone moves the system one step closer to the intended
+Plan-Act-plus-state runtime design.
+
+The code is still host-side and conservative, but the runtime now has an
+explicit representation for what the current medical case knows, what is still
+missing, and what the next focus should be.
+
+### Verification after this milestone
+
+Validated successfully on the server after the shared case-state changes:
+
+- `npm run build`
+- `npm test`
+
+Observed full test result at this milestone:
+
+- 26 test files passed
+- 284 tests passed
+
+## HealthClaw Medication Multi-Turn Continuity Milestone
+
+The medication consult path can now continue a recent unfinished medication
+case across turns instead of treating each reply as a fully isolated consult.
+
+### What changed
+
+The medication runtime now:
+
+- detects when a new `medication_consult` message should continue the latest
+  draft medication trace
+- merges newly extracted medication facts into the previous structured
+  medication case
+- reuses the shared `medical_case_state` layer to carry linked trace ids and
+  updated follow-up focus
+- records `follow_up_merged` for medication traces just like the symptom path
+
+### Medication continuity behavior
+
+The current multi-turn medication behavior now supports:
+
+- filling in a missing second medication for interaction checking
+- filling in a missing dose or formulation on a later turn
+- preserving the previous question intent when a short follow-up reply only
+  supplies details
+- generating an `Updated medication consult` patient summary after merge
+
+### Implementation notes
+
+Key code paths involved in this milestone:
+
+- `src/healthclaw/medication/consult.ts`
+- `src/healthclaw/runtime/handle-medical-message.ts`
+- `src/healthclaw/runtime/handle-medical-message.test.ts`
+
+This keeps the runtime aligned with the staged design:
+
+- deterministic host-side safety first
+- shared case-state as the continuity substrate
+- template-specific extraction merged into a reusable case-level runtime shape
+
+### Verification after this milestone
+
+Validated successfully on the server after the medication multi-turn
+continuity changes:
+
+- `npm run build`
+- `npm test`
+
+Observed full test result at this milestone:
+
+- 26 test files passed
+- 286 tests passed

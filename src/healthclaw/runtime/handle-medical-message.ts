@@ -6,9 +6,14 @@ import {
   saveMedicalTrace,
 } from '../../db.js';
 import {
+  buildMedicationCaseState,
+  buildSymptomCaseState,
+} from './case-state.js';
+import {
   buildMedicationConsultSummary,
   buildMedicationFollowUpPlan,
   extractStructuredMedicationFacts,
+  mergeStructuredMedicationFacts,
   runMedicationSafetyPrecheck,
 } from '../medication/consult.js';
 import {
@@ -237,6 +242,7 @@ function buildMedicationPatientView(
   summary: ReturnType<typeof buildMedicationConsultSummary>,
   safetyAssessment: ReturnType<typeof runMedicationSafetyPrecheck>,
   facts: StructuredMedicationFacts,
+  wasFollowUpMerge: boolean,
   followUpPlan: string[],
 ): PatientViewOutput {
   let recommendedAction: string;
@@ -256,8 +262,8 @@ function buildMedicationPatientView(
 
   const summaryPrefix =
     facts.medicationNames.length > 0
-      ? `Initial medication consult: ${facts.medicationNames.join(', ')}`
-      : 'Initial medication consult';
+      ? `${wasFollowUpMerge ? 'Updated' : 'Initial'} medication consult: ${facts.medicationNames.join(', ')}`
+      : `${wasFollowUpMerge ? 'Updated' : 'Initial'} medication consult`;
 
   return {
     templateLabel: 'Medication Consult',
@@ -277,6 +283,7 @@ function buildMedicationExpertView(
   safetyAssessment: ReturnType<typeof runMedicationSafetyPrecheck>,
   facts: StructuredMedicationFacts,
   followUpPlan: string[],
+  parentTraceId?: string,
 ): ExpertViewOutput {
   return {
     templateId: classification.templateId,
@@ -286,6 +293,7 @@ function buildMedicationExpertView(
       `raw_user_message=${input.content}`,
       `group_folder=${input.groupFolder}`,
       `chat_jid=${input.chatJid}`,
+      ...(parentTraceId ? [`parent_trace_id=${parentTraceId}`] : []),
     ],
     structuredMedicationFacts: facts,
     safetyAssessment,
@@ -303,6 +311,28 @@ function shouldContinuePreviousSymptomCase(
     previousTrace.templateId === 'symptom_triage' &&
     previousTrace.patientView.missingInformation.length > 0 &&
     classification.templateId === 'symptom_triage'
+  );
+}
+
+function shouldContinuePreviousMedicationCase(
+  previousTrace: MedicalTrace | undefined,
+  classification: ReturnType<typeof classifyMedicalTemplate>,
+): previousTrace is MedicalTrace {
+  return (
+    previousTrace !== undefined &&
+    previousTrace.templateId === 'medication_consult' &&
+    previousTrace.patientView.missingInformation.length > 0 &&
+    classification.templateId === 'medication_consult'
+  );
+}
+
+function buildLinkedTraceIds(previousTrace: MedicalTrace | undefined): string[] {
+  if (!previousTrace) {
+    return [];
+  }
+
+  return Array.from(
+    new Set([previousTrace.id, ...previousTrace.caseState.linkedTraceIds]),
   );
 }
 
@@ -325,7 +355,31 @@ export function handleMedicalMessage(
   const classification = classifyMedicalTemplate(input.content);
 
   if (classification.templateId === 'medication_consult') {
-    const facts = extractStructuredMedicationFacts(input.content);
+    const currentFacts = extractStructuredMedicationFacts(input.content);
+    const latestTrace = getLatestMedicalTraceForChat(
+      input.chatJid,
+      classification.templateId,
+    );
+    const continuingPreviousCase = shouldContinuePreviousMedicationCase(
+      latestTrace,
+      classification,
+    );
+    const facts = continuingPreviousCase
+      ? mergeStructuredMedicationFacts(
+          latestTrace.expertView.structuredMedicationFacts ?? {
+            medicationNames: [],
+            questionType: 'general_precaution',
+            allergyHistory: [],
+            otherMedications: [],
+            symptoms: [],
+            missingRequiredFields: [],
+          },
+          currentFacts,
+        )
+      : currentFacts;
+    const linkedTraceIds = buildLinkedTraceIds(
+      continuingPreviousCase ? latestTrace : undefined,
+    );
     const safetyAssessment = runMedicationSafetyPrecheck(input.content, facts);
     const consultSummary = buildMedicationConsultSummary(
       input.content,
@@ -337,6 +391,7 @@ export function handleMedicalMessage(
       consultSummary,
       safetyAssessment,
       facts,
+      continuingPreviousCase,
       followUpPlan,
     );
     const expertView = buildMedicationExpertView(
@@ -345,8 +400,15 @@ export function handleMedicalMessage(
       safetyAssessment,
       facts,
       followUpPlan,
+      continuingPreviousCase ? latestTrace.id : undefined,
     );
 
+    const caseState = buildMedicationCaseState(
+      facts,
+      safetyAssessment,
+      followUpPlan,
+      linkedTraceIds,
+    );
     const trace: MedicalTrace = {
       id: randomUUID(),
       chatJid: input.chatJid,
@@ -355,9 +417,11 @@ export function handleMedicalMessage(
       createdAt: now,
       updatedAt: now,
       status: facts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
+      parentTraceId: continuingPreviousCase ? latestTrace.id : undefined,
       userMessage: input.content,
       classification,
       safetyAssessment,
+      caseState,
       patientView,
       expertView,
       evidence: [
@@ -392,6 +456,19 @@ export function handleMedicalMessage(
             ...facts,
           },
         },
+        ...(continuingPreviousCase
+          ? [
+              {
+                type: 'follow_up_merged' as const,
+                createdAt: now,
+                payload: {
+                  parentTraceId: latestTrace.id,
+                  previousMissingInformation:
+                    latestTrace.patientView.missingInformation,
+                },
+              },
+            ]
+          : []),
         {
           type: 'safety_precheck_completed',
           createdAt: now,
@@ -408,6 +485,11 @@ export function handleMedicalMessage(
             followUpPlan,
             followUpQuestions: patientView.followUpQuestions,
           },
+        },
+        {
+          type: 'case_state_updated',
+          createdAt: now,
+          payload: caseState,
         },
         {
           type: 'patient_output_created',
@@ -484,6 +566,15 @@ export function handleMedicalMessage(
     followUpPlan,
     continuingPreviousCase ? latestTrace.id : undefined,
   );
+  const linkedTraceIds = buildLinkedTraceIds(
+    continuingPreviousCase ? latestTrace : undefined,
+  );
+  const caseState = buildSymptomCaseState(
+    structuredFacts,
+    safetyAssessment,
+    followUpPlan,
+    linkedTraceIds,
+  );
 
   const trace: MedicalTrace = {
     id: randomUUID(),
@@ -497,6 +588,7 @@ export function handleMedicalMessage(
     userMessage: input.content,
     classification,
     safetyAssessment,
+    caseState,
     patientView,
     expertView,
     evidence: [
@@ -560,6 +652,11 @@ export function handleMedicalMessage(
           followUpPlan,
           followUpQuestions: patientView.followUpQuestions,
         },
+      },
+      {
+        type: 'case_state_updated',
+        createdAt: now,
+        payload: caseState,
       },
       {
         type: 'patient_output_created',

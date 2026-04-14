@@ -4,6 +4,7 @@ import {
   buildMedicationConsultSummary,
   buildMedicationFollowUpPlan,
   extractStructuredMedicationFacts,
+  mergeStructuredMedicationFacts,
   runMedicationSafetyPrecheck,
 } from './consult.js';
 
@@ -74,5 +75,19 @@ describe('HealthClaw medication consult helpers', () => {
     expect(facts.missingRequiredFields).toContain('medication_name');
     expect(followUpPlan).toContain('clarify the exact medication name');
     expect(summary.followUpQuestions[0]).toContain('exact medication name');
+  });
+
+  it('merges medication follow-up details into a previous draft case', () => {
+    const first = extractStructuredMedicationFacts(
+      'Can I take warfarin with another medicine?',
+    );
+    const second = extractStructuredMedicationFacts('It is ibuprofen 200 mg tablets.');
+    const merged = mergeStructuredMedicationFacts(first, second);
+
+    expect(merged.medicationNames).toEqual(['warfarin', 'ibuprofen']);
+    expect(merged.questionType).toBe('interaction_check');
+    expect(merged.doseText).toBe('200 mg');
+    expect(merged.formulation).toBe('tablet');
+    expect(merged.missingRequiredFields).toEqual([]);
   });
 });

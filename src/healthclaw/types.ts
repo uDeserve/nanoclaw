@@ -126,12 +126,25 @@ export interface MedicalEvidenceLink {
   detail: string;
 }
 
+export interface MedicalCaseState {
+  [key: string]: unknown;
+  taskType: MedicalTaskTemplateId;
+  knownStructuredFacts: Record<string, unknown>;
+  missingFields: string[];
+  riskLevel: SafetyLevel;
+  disposition: SafetyDisposition;
+  currentFollowUpFocus: string[];
+  linkedTraceIds: string[];
+  caseStatus: 'draft' | 'completed';
+}
+
 export interface MedicalTraceEvent {
   type:
     | 'template_classified'
     | 'structured_facts_extracted'
     | 'follow_up_merged'
     | 'follow_up_plan_created'
+    | 'case_state_updated'
     | 'safety_precheck_completed'
     | 'patient_output_created'
     | 'expert_output_created';
@@ -151,6 +164,7 @@ export interface MedicalTrace {
   userMessage: string;
   classification: TemplateClassification;
   safetyAssessment: SafetyAssessment;
+  caseState: MedicalCaseState;
   patientView: PatientViewOutput;
   expertView: ExpertViewOutput;
   evidence: MedicalEvidenceLink[];

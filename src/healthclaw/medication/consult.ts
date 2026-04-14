@@ -26,6 +26,13 @@ function dedupe(items: string[]): string[] {
   return Array.from(new Set(items));
 }
 
+function mergePreferredQuestionType(
+  previous: MedicationQuestionType,
+  current: MedicationQuestionType,
+): MedicationQuestionType {
+  return current === 'general_precaution' ? previous : current;
+}
+
 function extractMedicationNames(content: string): string[] {
   const normalized = content.toLowerCase();
   return dedupe(
@@ -106,6 +113,10 @@ function classifyQuestionType(
   medicationNames: string[],
 ): MedicationQuestionType {
   const normalized = content.toLowerCase();
+  const mentionsCombinedUse =
+    /\b(take|taking|combine|mix)\b[^?.!]*\bwith\b/.test(normalized) ||
+    normalized.includes('together');
+
   if (
     normalized.includes('missed dose') ||
     normalized.includes('missed a dose') ||
@@ -130,8 +141,7 @@ function classifyQuestionType(
   }
   if (
     medicationNames.length >= 2 ||
-    normalized.includes('together') ||
-    normalized.includes('take with') ||
+    mentionsCombinedUse ||
     normalized.includes('combine')
   ) {
     return 'interaction_check';
@@ -174,24 +184,71 @@ export function extractStructuredMedicationFacts(
     missingRequiredFields: [],
   };
 
+  facts.missingRequiredFields = computeMedicationMissingRequiredFields(facts);
+  return facts;
+}
+
+export function computeMedicationMissingRequiredFields(
+  facts: Pick<
+    StructuredMedicationFacts,
+    'medicationNames' | 'questionType' | 'doseText'
+  >,
+): string[] {
+  const missingRequiredFields: string[] = [];
+
   if (facts.medicationNames.length === 0) {
-    facts.missingRequiredFields.push('medication_name');
+    missingRequiredFields.push('medication_name');
   }
   if (
     facts.questionType === 'interaction_check' &&
     facts.medicationNames.length < 2
   ) {
-    facts.missingRequiredFields.push('second_medication');
+    missingRequiredFields.push('second_medication');
   }
   if (
     (facts.questionType === 'dose_question' ||
       facts.questionType === 'missed_dose') &&
     !facts.doseText
   ) {
-    facts.missingRequiredFields.push('dose');
+    missingRequiredFields.push('dose');
   }
 
-  return facts;
+  return missingRequiredFields;
+}
+
+export function mergeStructuredMedicationFacts(
+  previous: StructuredMedicationFacts,
+  current: StructuredMedicationFacts,
+): StructuredMedicationFacts {
+  const questionType = mergePreferredQuestionType(
+    previous.questionType,
+    current.questionType,
+  );
+  const medicationNames = dedupe([
+    ...previous.medicationNames,
+    ...current.medicationNames,
+  ]);
+
+  return {
+    medicationNames,
+    questionType,
+    doseText: current.doseText ?? previous.doseText,
+    frequency: current.frequency ?? previous.frequency,
+    formulation: current.formulation ?? previous.formulation,
+    ageYears: current.ageYears ?? previous.ageYears,
+    pregnancyStatus: current.pregnancyStatus ?? previous.pregnancyStatus,
+    allergyHistory: dedupe([
+      ...previous.allergyHistory,
+      ...current.allergyHistory,
+    ]),
+    otherMedications: medicationNames.slice(1),
+    symptoms: dedupe([...previous.symptoms, ...current.symptoms]),
+    missingRequiredFields: computeMedicationMissingRequiredFields({
+      medicationNames,
+      questionType,
+      doseText: current.doseText ?? previous.doseText,
+    }),
+  };
 }
 
 export function runMedicationSafetyPrecheck(

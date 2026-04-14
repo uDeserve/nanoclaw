@@ -36,6 +36,8 @@ describe('HealthClaw runtime handler', () => {
     expect(storedTrace?.expertView.structuredSymptomFacts?.symptomLocation).toBe(
       'chest',
     );
+    expect(storedTrace?.caseState.taskType).toBe('symptom_triage');
+    expect(storedTrace?.caseState.riskLevel).toBe('critical');
 
     const events = getMedicalTraceEvents(result.trace.id);
     expect(events.map((event) => event.type)).toEqual([
@@ -43,6 +45,7 @@ describe('HealthClaw runtime handler', () => {
       'structured_facts_extracted',
       'safety_precheck_completed',
       'follow_up_plan_created',
+      'case_state_updated',
       'patient_output_created',
       'expert_output_created',
     ]);
@@ -90,6 +93,7 @@ describe('HealthClaw runtime handler', () => {
       'clarify current severity',
     ]);
     expect(second.expertView.extractedFacts).toContain('duration=3 days');
+    expect(second.trace.caseState.linkedTraceIds).toEqual([first.trace.id]);
 
     const events = getMedicalTraceEvents(second.trace.id);
     expect(events.map((event) => event.type)).toContain('follow_up_merged');
@@ -109,6 +113,10 @@ describe('HealthClaw runtime handler', () => {
     expect(result.trace.status).toBe('completed');
     expect(result.patientView.templateLabel).toBe('Medication Consult');
     expect(result.patientView.recommendedAction).toContain('urgent');
+    expect(result.trace.caseState.taskType).toBe('medication_consult');
+    expect(result.trace.caseState.knownStructuredFacts.questionType).toBe(
+      'interaction_check',
+    );
     expect(result.expertView.structuredMedicationFacts?.medicationNames).toEqual(
       ['warfarin', 'ibuprofen'],
     );
@@ -133,6 +141,36 @@ describe('HealthClaw runtime handler', () => {
     expect(result.patientView.nextStepFocus).toContain(
       'clarify the exact medication name',
     );
+  });
+
+  it('merges a follow-up reply into the previous draft medication trace', () => {
+    const first = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'Can I take warfarin with another medicine?',
+    });
+
+    const second = handleMedicalMessage({
+      chatJid: 'test-chat',
+      groupFolder: 'main',
+      content: 'It is ibuprofen 200 mg tablets.',
+    });
+
+    expect(first.trace.status).toBe('draft');
+    expect(second.trace.parentTraceId).toBe(first.trace.id);
+    expect(second.trace.status).toBe('completed');
+    expect(second.patientView.summary).toContain('Updated medication consult');
+    expect(second.patientView.missingInformation).toEqual([]);
+    expect(second.expertView.structuredMedicationFacts?.medicationNames).toEqual(
+      ['warfarin', 'ibuprofen'],
+    );
+    expect(second.expertView.extractedFacts).toContain(
+      `parent_trace_id=${first.trace.id}`,
+    );
+    expect(second.trace.caseState.linkedTraceIds).toEqual([first.trace.id]);
+
+    const events = getMedicalTraceEvents(second.trace.id);
+    expect(events.map((event) => event.type)).toContain('follow_up_merged');
   });
 
   it('surfaces medication allergy conflicts in patient and expert outputs', () => {
