@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  _initTestDatabase,
-  getMedicalTraceEvents,
-} from '../../db.js';
+import { _initTestDatabase, getMedicalTraceEvents } from '../../db.js';
 import { handleMedicalMessage } from './handle-medical-message.js';
 import { createHeartbeatEvent } from './heartbeat.js';
 import { createHealthEvent } from './events.js';

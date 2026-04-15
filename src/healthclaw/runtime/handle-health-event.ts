@@ -86,13 +86,12 @@ export function handleHealthEvent(
         (reason: string) => `planner_reason=${reason}`,
       ),
     ],
-    safetyAssessment:
-      activeTrace?.safetyAssessment ?? {
-        level: 'low',
-        disposition: 'self_care',
-        redFlags: [],
-        rationale: ['no active safety concern attached to the proactive event'],
-      },
+    safetyAssessment: activeTrace?.safetyAssessment ?? {
+      level: 'low',
+      disposition: 'self_care',
+      redFlags: [],
+      rationale: ['no active safety concern attached to the proactive event'],
+    },
     routingReason: [`health event trigger: ${event.eventType}`],
     followUpPlan: plannerDecision.actionPlan?.rationale ?? [],
   };
@@ -102,10 +101,17 @@ export function handleHealthEvent(
         ...activeTrace.caseState,
         subjectId: event.subjectId,
         eventSourceHistory: Array.from(
-          new Set([...(activeTrace.caseState.eventSourceHistory ?? []), event.source]),
+          new Set([
+            ...(activeTrace.caseState.eventSourceHistory ?? []),
+            event.source,
+          ]),
         ),
-        lastProactiveContactAt: plannerDecision.shouldAct ? now : activeTrace.caseState.lastProactiveContactAt,
-        casePhase: plannerDecision.shouldAct ? 'follow_up' : activeTrace.caseState.casePhase,
+        lastProactiveContactAt: plannerDecision.shouldAct
+          ? now
+          : activeTrace.caseState.lastProactiveContactAt,
+        casePhase: plannerDecision.shouldAct
+          ? 'follow_up'
+          : activeTrace.caseState.casePhase,
       }
     : {
         subjectId: event.subjectId,
@@ -132,27 +138,28 @@ export function handleHealthEvent(
     status: plannerDecision.shouldAct ? 'draft' : 'completed',
     parentTraceId: activeTrace?.id,
     userMessage: JSON.stringify(event.payload),
-    classification:
-      activeTrace?.classification ?? {
-        templateId: activeTrace?.templateId ?? 'symptom_triage',
-        confidence: 1,
-        reasons: [`event-driven follow-up from ${event.eventType}`],
-      },
+    classification: activeTrace?.classification ?? {
+      templateId: activeTrace?.templateId ?? 'symptom_triage',
+      confidence: 1,
+      reasons: [`event-driven follow-up from ${event.eventType}`],
+    },
     safetyAssessment: expertView.safetyAssessment,
     caseState,
-    patientView:
-      patientView ?? {
-        summary: 'HealthClaw heartbeat completed with no proactive action.',
-        recommendedAction: 'No action required.',
-        nextStepFocus: [],
-        followUpQuestions: [],
-        selfCareAdvice: [],
-        safetyWarnings: [],
-        missingInformation: [],
-      },
+    patientView: patientView ?? {
+      summary: 'HealthClaw heartbeat completed with no proactive action.',
+      recommendedAction: 'No action required.',
+      nextStepFocus: [],
+      followUpQuestions: [],
+      selfCareAdvice: [],
+      safetyWarnings: [],
+      missingInformation: [],
+    },
     expertView,
     evidence: [
-      { kind: 'event', detail: `health_event=${event.eventType}:${event.source}` },
+      {
+        kind: 'event',
+        detail: `health_event=${event.eventType}:${event.source}`,
+      },
       ...plannerDecision.reasoning.map((reason: string) => ({
         kind: 'rule' as const,
         detail: reason,

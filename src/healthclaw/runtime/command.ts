@@ -69,7 +69,9 @@ export function formatProactiveActionMessage(
   const lines = ['[HealthClaw Proactive Follow-up]'];
 
   if (actionPlan.actionType === 'send_reminder') {
-    lines.push(`Reminder: ${actionPlan.message ?? 'A health reminder is due.'}`);
+    lines.push(
+      `Reminder: ${actionPlan.message ?? 'A health reminder is due.'}`,
+    );
   } else if (actionPlan.actionType === 'ask_follow_up') {
     lines.push(
       `Follow-up: ${actionPlan.question ?? actionPlan.message ?? 'HealthClaw has a follow-up question.'}`,
