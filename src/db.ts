@@ -793,6 +793,25 @@ export function getLatestMedicalTraceForChat(
   return row ? (JSON.parse(row.trace_json) as MedicalTrace) : undefined;
 }
 
+export function getMedicalTracesForChat(
+  chatJid: string,
+  limit: number = 10,
+): MedicalTrace[] {
+  const rows = db
+    .prepare(
+      `
+      SELECT trace_json
+      FROM medical_traces
+      WHERE chat_jid = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `,
+    )
+    .all(chatJid, limit) as Array<{ trace_json: string }>;
+
+  return rows.map((row) => JSON.parse(row.trace_json) as MedicalTrace);
+}
+
 export function getMedicalTraceEvents(traceId: string): Array<{
   type: string;
   createdAt: string;

@@ -93,9 +93,10 @@ Already implemented in code:
 - automatic routing of medically relevant messages when enabled
 - first event-driven proactive runtime skeleton
 - `HealthEvent` protocol types
-- mock planner interface for proactive follow-up planning
+- planner adapter boundary for proactive follow-up planning
 - `handleHealthEvent(...)` proactive runtime entry
 - first heartbeat event helper
+- active case selection for proactive events
 - shared medical trace persistence in SQLite
 - shared `medical_case_state`
 - first `symptom_triage` host-side path
@@ -114,7 +115,9 @@ Important files:
 
 - `src/healthclaw/types.ts`
 - `src/healthclaw/case-state/medical-case-state.ts`
+- `src/healthclaw/agents/planner/planner-adapter.ts`
 - `src/healthclaw/agents/planner/mock-planner.ts`
+- `src/healthclaw/runtime/active-case-selector.ts`
 - `src/healthclaw/runtime/handle-health-event.ts`
 - `src/healthclaw/runtime/heartbeat.ts`
 - `src/healthclaw/runtime/handle-medical-message.ts`
@@ -148,6 +151,7 @@ Not done yet:
 - agent-first task routing
 - explicit agent-to-agent communication
 - production planner agent
+- richer active-case selection beyond trace-local heuristics
 - persistent health cron scheduling
 - external trigger ingress
 - real presence-aware event wiring
@@ -200,6 +204,7 @@ rules."
 The next real milestone should be:
 
 - replace the mock proactive planner with a real planner-agent path
+- keep using the planner adapter boundary rather than calling any concrete planner directly from runtime
 - add persistent health scheduling after the event runtime skeleton
 - extend proactive event coverage beyond the first simulated cases
 

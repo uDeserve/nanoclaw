@@ -2,10 +2,9 @@ import { randomUUID } from 'crypto';
 
 import {
   appendMedicalTraceEvent,
-  getLatestMedicalTraceForChat,
   saveMedicalTrace,
 } from '../../db.js';
-import { runMockPlanner } from '../agents/planner/mock-planner.js';
+import { runPlannerAgent } from '../agents/planner/planner-adapter.js';
 import {
   ExpertViewOutput,
   HealthEvent,
@@ -14,6 +13,7 @@ import {
   PatientViewOutput,
   PlannerContext,
 } from '../types.js';
+import { selectActiveCaseForEvent } from './active-case-selector.js';
 import { formatProactiveActionMessage } from './command.js';
 
 function buildRecentTraceSummary(trace: MedicalTrace | undefined): string[] {
@@ -45,14 +45,17 @@ export function handleHealthEvent(
   event: HealthEvent,
 ): HealthEventRuntimeResult {
   const now = new Date().toISOString();
-  const activeTrace = getLatestMedicalTraceForChat(event.chatJid);
+  const selection = selectActiveCaseForEvent(event);
+  const activeTrace = selection.activeTrace;
   const plannerContext: PlannerContext = {
     event,
     activeTrace,
     activeCaseState: activeTrace?.caseState,
     recentTraceSummary: buildRecentTraceSummary(activeTrace),
+    selectionReason: selection.selectionReason,
+    candidateTraceIds: selection.candidateTraceIds,
   };
-  const plannerDecision = runMockPlanner(plannerContext);
+  const plannerDecision = runPlannerAgent(plannerContext);
 
   const patientView: PatientViewOutput | undefined = plannerDecision.shouldAct
     ? {
@@ -81,6 +84,10 @@ export function handleHealthEvent(
       `health_event_type=${event.eventType}`,
       `health_event_source=${event.source}`,
       `subject_id=${event.subjectId}`,
+      `selection_reason=${plannerContext.selectionReason}`,
+      ...plannerContext.candidateTraceIds.map(
+        (traceId: string) => `candidate_trace_id=${traceId}`,
+      ),
       ...plannerContext.recentTraceSummary,
       ...plannerDecision.reasoning.map(
         (reason: string) => `planner_reason=${reason}`,
@@ -181,6 +188,8 @@ export function handleHealthEvent(
         payload: {
           activeTraceId: activeTrace?.id,
           recentTraceSummary: plannerContext.recentTraceSummary,
+          selectionReason: plannerContext.selectionReason,
+          candidateTraceIds: plannerContext.candidateTraceIds,
         },
       },
       {
@@ -189,6 +198,7 @@ export function handleHealthEvent(
         payload: {
           shouldAct: plannerDecision.shouldAct,
           reasoning: plannerDecision.reasoning,
+          plannerId: plannerDecision.plannerId,
         },
       },
       {

@@ -225,6 +225,8 @@ export interface PlannerContext {
   activeTrace?: MedicalTrace;
   activeCaseState?: MedicalCaseState;
   recentTraceSummary: string[];
+  selectionReason: string;
+  candidateTraceIds: string[];
 }
 
 export type ProactiveActionType =
@@ -249,6 +251,14 @@ export interface PlannerDecision {
   shouldAct: boolean;
   actionPlan?: ProactiveActionPlan;
   reasoning: string[];
+  plannerId?: string;
+}
+
+export interface ActiveCaseSelection {
+  activeTrace?: MedicalTrace;
+  activeCaseState?: MedicalCaseState;
+  candidateTraceIds: string[];
+  selectionReason: string;
 }
 
 export interface MedicalTrace {

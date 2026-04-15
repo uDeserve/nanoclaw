@@ -20,6 +20,9 @@ describe('HealthClaw architecture import boundaries', () => {
     expect(source.includes('../triage/symptom.js')).toBe(false);
     expect(source.includes('../medication/consult.js')).toBe(false);
     expect(source.includes('../report/interpret.js')).toBe(false);
+    expect(eventSource.includes('../agents/planner/mock-planner.js')).toBe(
+      false,
+    );
   });
 
   it('keeps the router agent out of legacy imports', () => {

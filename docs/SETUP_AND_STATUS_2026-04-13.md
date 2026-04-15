@@ -955,3 +955,63 @@ Observed HealthClaw-focused test result at this milestone:
 
 - 10 HealthClaw test files passed
 - 42 HealthClaw tests passed
+
+## HealthClaw Planner Adapter And Active Case Selection Milestone
+
+The proactive runtime now has a cleaner Stage 2 orchestration shape.
+
+### What changed
+
+Added two important runtime boundaries:
+
+- `src/healthclaw/agents/planner/planner-adapter.ts`
+- `src/healthclaw/runtime/active-case-selector.ts`
+
+The proactive event path now:
+
+- selects an active case through a dedicated runtime selector
+- passes a structured planner context through a planner adapter boundary
+- keeps the mock planner behind that adapter instead of importing it directly
+- records case-selection rationale and candidate trace ids in proactive traces
+
+### Why this matters
+
+This milestone is important because it moves HealthClaw one step closer to an
+agent-oriented runtime without pretending that a real planner agent already
+exists.
+
+The runtime responsibility is now clearer:
+
+- runtime decides which case should be considered
+- planner adapter decides which planner implementation to invoke
+- planner decides whether to act
+
+That separation is more compatible with the intended future direction:
+
+- LLM planner replacement
+- better event-context construction
+- cron / webhook / presence-driven triggers using the same runtime entry shape
+
+### Current active-case behavior
+
+The new selector currently supports:
+
+- explicit `event.caseId` targeting
+- medication reminders preferring the latest medication consult case
+- proactive follow-ups preferring the most recent still-active case
+- fallback to the most recent trace only when no active case is found
+
+This is still runtime orchestration logic, not semantic medical reasoning.
+
+### Verification after this milestone
+
+Validated successfully in the clean local worktree:
+
+- `npm run build`
+- `npx vitest run src/healthclaw/runtime/handle-health-event.test.ts src/healthclaw/architecture/import-boundaries.test.ts`
+
+Observed result for this milestone:
+
+- build passed
+- 2 targeted HealthClaw test files passed
+- 6 targeted tests passed
