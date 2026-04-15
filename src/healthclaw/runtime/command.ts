@@ -1,5 +1,5 @@
 import { NewMessage } from '../../types.js';
-import { PatientViewOutput } from '../types.js';
+import { PatientViewOutput, ProactiveActionPlan } from '../types.js';
 
 export const HEALTHCLAW_COMMAND_PREFIX = '/healthclaw';
 
@@ -57,6 +57,35 @@ export function formatPatientViewMessage(view: PatientViewOutput): string {
     lines.push('Safety warnings:');
     for (const warning of view.safetyWarnings) {
       lines.push(`- ${warning}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+export function formatProactiveActionMessage(
+  actionPlan: ProactiveActionPlan,
+): string {
+  const lines = ['[HealthClaw Proactive Follow-up]'];
+
+  if (actionPlan.actionType === 'send_reminder') {
+    lines.push(`Reminder: ${actionPlan.message ?? 'A health reminder is due.'}`);
+  } else if (actionPlan.actionType === 'ask_follow_up') {
+    lines.push(
+      `Follow-up: ${actionPlan.question ?? actionPlan.message ?? 'HealthClaw has a follow-up question.'}`,
+    );
+  } else if (actionPlan.actionType === 'escalate_review') {
+    lines.push(
+      `Escalation: ${actionPlan.message ?? 'A higher-priority review is recommended.'}`,
+    );
+  } else {
+    lines.push('No proactive action is needed right now.');
+  }
+
+  if (actionPlan.rationale.length > 0) {
+    lines.push('Reason:');
+    for (const item of actionPlan.rationale) {
+      lines.push(`- ${item}`);
     }
   }
 

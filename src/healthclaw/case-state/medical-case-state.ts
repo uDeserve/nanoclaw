@@ -30,6 +30,7 @@ export function buildSymptomCaseState(
   linkedTraceIds: string[],
 ): MedicalCaseState {
   return {
+    caseKind: 'symptom_triage',
     taskType: 'symptom_triage',
     knownStructuredFacts: compactStructuredFacts({
       chiefComplaint: facts.chiefComplaint,
@@ -46,6 +47,8 @@ export function buildSymptomCaseState(
     disposition: safety.disposition,
     currentFollowUpFocus: followUpPlan,
     linkedTraceIds,
+    activeFollowUpGoal: followUpPlan[0],
+    casePhase: facts.missingRequiredFields.length > 0 ? 'intake' : 'monitoring',
     caseStatus: facts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
   };
 }
@@ -57,6 +60,7 @@ export function buildMedicationCaseState(
   linkedTraceIds: string[],
 ): MedicalCaseState {
   return {
+    caseKind: 'medication_consult',
     taskType: 'medication_consult',
     knownStructuredFacts: compactStructuredFacts({
       medicationNames: facts.medicationNames,
@@ -75,6 +79,9 @@ export function buildMedicationCaseState(
     disposition: safety.disposition,
     currentFollowUpFocus: followUpPlan,
     linkedTraceIds,
+    activeFollowUpGoal: followUpPlan[0],
+    medicationScheduleHints: facts.frequency ? [facts.frequency] : [],
+    casePhase: facts.missingRequiredFields.length > 0 ? 'intake' : 'monitoring',
     caseStatus: facts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
   };
 }
@@ -86,6 +93,7 @@ export function buildReportCaseState(
   linkedTraceIds: string[],
 ): MedicalCaseState {
   return {
+    caseKind: 'report_interpretation',
     taskType: 'report_interpretation',
     knownStructuredFacts: compactStructuredFacts({
       reportText: facts.reportText,
@@ -99,6 +107,8 @@ export function buildReportCaseState(
     disposition: safety.disposition,
     currentFollowUpFocus: followUpPlan,
     linkedTraceIds,
+    activeFollowUpGoal: followUpPlan[0],
+    casePhase: facts.missingRequiredFields.length > 0 ? 'intake' : 'monitoring',
     caseStatus: facts.missingRequiredFields.length > 0 ? 'draft' : 'completed',
   };
 }

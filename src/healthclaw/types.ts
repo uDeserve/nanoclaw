@@ -4,6 +4,23 @@ export type MedicalTaskTemplateId =
   | 'report_interpretation'
   | 'imaging_qa';
 
+export type HealthEventType =
+  | 'user_message'
+  | 'heartbeat_tick'
+  | 'scheduled_checkin'
+  | 'medication_due'
+  | 'presence_detected'
+  | 'state_transition_due'
+  | 'external_trigger';
+
+export type HealthEventSource =
+  | 'user'
+  | 'heartbeat'
+  | 'scheduler'
+  | 'presence_sensor'
+  | 'external_system'
+  | 'runtime';
+
 export type SafetyDisposition =
   | 'self_care'
   | 'routine_follow_up'
@@ -49,6 +66,18 @@ export interface TemplateClassification {
   templateId: MedicalTaskTemplateId;
   confidence: number;
   reasons: string[];
+}
+
+export interface HealthEvent {
+  eventId: string;
+  eventType: HealthEventType;
+  subjectId: string;
+  chatJid: string;
+  groupFolder: string;
+  caseId?: string;
+  occurredAt: string;
+  source: HealthEventSource;
+  payload: Record<string, unknown>;
 }
 
 export interface StructuredSymptomFacts {
@@ -148,12 +177,14 @@ export interface ExpertViewOutput {
 }
 
 export interface MedicalEvidenceLink {
-  kind: 'user_statement' | 'rule' | 'extracted_fact';
+  kind: 'event' | 'user_statement' | 'rule' | 'extracted_fact';
   detail: string;
 }
 
 export interface MedicalCaseState {
   [key: string]: unknown;
+  subjectId?: string;
+  caseKind?: MedicalTaskTemplateId;
   taskType: MedicalTaskTemplateId;
   knownStructuredFacts: Record<string, unknown>;
   missingFields: string[];
@@ -161,6 +192,12 @@ export interface MedicalCaseState {
   disposition: SafetyDisposition;
   currentFollowUpFocus: string[];
   linkedTraceIds: string[];
+  activeFollowUpGoal?: string;
+  nextSuggestedCheckAt?: string;
+  lastProactiveContactAt?: string;
+  medicationScheduleHints?: string[];
+  casePhase?: 'intake' | 'monitoring' | 'follow_up' | 'closed';
+  eventSourceHistory?: HealthEventSource[];
   caseStatus: 'draft' | 'completed';
 }
 
@@ -173,9 +210,45 @@ export interface MedicalTraceEvent {
     | 'case_state_updated'
     | 'safety_precheck_completed'
     | 'patient_output_created'
-    | 'expert_output_created';
+    | 'expert_output_created'
+    | 'health_event_received'
+    | 'planner_context_built'
+    | 'planner_decision_made'
+    | 'proactive_action_created'
+    | 'proactive_action_skipped';
   createdAt: string;
   payload: Record<string, unknown>;
+}
+
+export interface PlannerContext {
+  event: HealthEvent;
+  activeTrace?: MedicalTrace;
+  activeCaseState?: MedicalCaseState;
+  recentTraceSummary: string[];
+}
+
+export type ProactiveActionType =
+  | 'ask_follow_up'
+  | 'send_reminder'
+  | 'stay_silent'
+  | 'escalate_review';
+
+export interface ProactiveActionPlan {
+  actionType: ProactiveActionType;
+  subjectId: string;
+  chatJid: string;
+  groupFolder: string;
+  caseId?: string;
+  rationale: string[];
+  question?: string;
+  message?: string;
+  linkedTraceIds: string[];
+}
+
+export interface PlannerDecision {
+  shouldAct: boolean;
+  actionPlan?: ProactiveActionPlan;
+  reasoning: string[];
 }
 
 export interface MedicalTrace {
@@ -205,6 +278,15 @@ export interface MedicalRuntimeInput {
 
 export interface MedicalRuntimeResult {
   patientView: PatientViewOutput;
+  expertView: ExpertViewOutput;
+  trace: MedicalTrace;
+}
+
+export interface HealthEventRuntimeResult {
+  acted: boolean;
+  actionPlan?: ProactiveActionPlan;
+  patientView?: PatientViewOutput;
+  patientMessage?: string;
   expertView: ExpertViewOutput;
   trace: MedicalTrace;
 }

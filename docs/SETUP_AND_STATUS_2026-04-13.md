@@ -872,3 +872,86 @@ Observed full test result at this milestone:
 
 - 25 test files passed
 - 277 tests passed
+
+## HealthClaw Event Runtime Skeleton Milestone
+
+HealthClaw now includes the first event-driven proactive runtime skeleton on
+top of the existing host-side medical message flow.
+
+### What changed
+
+Added a first event-driven layer under `src/healthclaw/`:
+
+- `agents/planner/mock-planner.ts`
+- `runtime/events.ts`
+- `runtime/heartbeat.ts`
+- `runtime/handle-health-event.ts`
+- `runtime/handle-health-event.test.ts`
+
+The runtime now has:
+
+- `HealthEvent` protocol types
+- `PlannerContext`, `PlannerDecision`, and `ProactiveActionPlan` types
+- a first `handleHealthEvent(...)` entrypoint
+- a first heartbeat event helper
+- a mock planner interface that decides between:
+  - `ask_follow_up`
+  - `send_reminder`
+  - `stay_silent`
+- proactive trace events such as:
+  - `health_event_received`
+  - `planner_context_built`
+  - `planner_decision_made`
+  - `proactive_action_created`
+  - `proactive_action_skipped`
+
+### What this milestone is and is not
+
+This milestone is:
+
+- a runtime-structure milestone
+- the first proactive interaction skeleton
+- a bridge from passive host handling toward an event-driven health module
+
+This milestone is not yet:
+
+- a real LLM planner
+- real cron scheduling
+- real webhook ingress
+- real embodied sensing
+- real agent-to-agent execution
+
+### Current simulated proactive coverage
+
+The new tests now cover:
+
+- `presence_detected` causing a proactive follow-up on an unfinished symptom
+  case
+- `medication_due` causing a reminder action
+- `heartbeat_tick` staying silent when there is no active follow-up goal
+
+### Why this matters
+
+This is the first code milestone that directly reflects the intended
+family-robot / home-health story.
+
+Before this, HealthClaw could only react to user messages.
+
+Now the runtime has the first explicit shape for:
+
+- event ingress
+- planner context
+- proactive action planning
+- proactive trace persistence
+
+### Verification after this milestone
+
+Validated successfully in the local clean development workspace:
+
+- `npm run build`
+- `npx vitest run src/healthclaw`
+
+Observed HealthClaw-focused test result at this milestone:
+
+- 10 HealthClaw test files passed
+- 42 HealthClaw tests passed

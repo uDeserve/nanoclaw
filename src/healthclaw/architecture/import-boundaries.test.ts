@@ -12,8 +12,10 @@ function read(relativePath: string): string {
 describe('HealthClaw architecture import boundaries', () => {
   it('keeps runtime out of legacy imports', () => {
     const source = read(join('runtime', 'handle-medical-message.ts'));
+    const eventSource = read(join('runtime', 'handle-health-event.ts'));
 
     expect(source.includes('/legacy/')).toBe(false);
+    expect(eventSource.includes('/legacy/')).toBe(false);
     expect(source.includes('../templates/registry.js')).toBe(false);
     expect(source.includes('../triage/symptom.js')).toBe(false);
     expect(source.includes('../medication/consult.js')).toBe(false);

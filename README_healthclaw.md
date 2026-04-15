@@ -91,6 +91,11 @@ Already implemented in code:
 - feature-gated HealthClaw runtime path inside `src/index.ts`
 - explicit `/healthclaw ...` command entry
 - automatic routing of medically relevant messages when enabled
+- first event-driven proactive runtime skeleton
+- `HealthEvent` protocol types
+- mock planner interface for proactive follow-up planning
+- `handleHealthEvent(...)` proactive runtime entry
+- first heartbeat event helper
 - shared medical trace persistence in SQLite
 - shared `medical_case_state`
 - first `symptom_triage` host-side path
@@ -109,6 +114,9 @@ Important files:
 
 - `src/healthclaw/types.ts`
 - `src/healthclaw/case-state/medical-case-state.ts`
+- `src/healthclaw/agents/planner/mock-planner.ts`
+- `src/healthclaw/runtime/handle-health-event.ts`
+- `src/healthclaw/runtime/heartbeat.ts`
 - `src/healthclaw/runtime/handle-medical-message.ts`
 - `src/healthclaw/runtime/command.ts`
 - `src/healthclaw/agents/router/router-agent.ts`
@@ -139,10 +147,10 @@ Not done yet:
 
 - agent-first task routing
 - explicit agent-to-agent communication
-- proactive health heartbeat
-- health cron scheduling
+- production planner agent
+- persistent health cron scheduling
 - external trigger ingress
-- presence-aware event handling
+- real presence-aware event wiring
 - image-first report ingestion
 - deep imaging orchestration
 - richer household case continuity beyond the current host-side paths
@@ -191,11 +199,12 @@ rules."
 
 The next real milestone should be:
 
-- introduce an event-driven health runtime entry
-- add a minimal heartbeat-based proactive follow-up loop
-- define the first `HealthEvent` protocol and simulated presence-aware tests
+- replace the mock proactive planner with a real planner-agent path
+- add persistent health scheduling after the event runtime skeleton
+- extend proactive event coverage beyond the first simulated cases
 
 Reason:
 
-- that is the shortest path from passive medical task handling to the intended
-  proactive family-robot health module story
+- the event-driven runtime skeleton now exists, so the next value is in making
+  the proactive planner and scheduler more real without falling back into
+  rule-first design
